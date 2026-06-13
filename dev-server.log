@@ -1,0 +1,755 @@
+
+> agnes-creator@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3000
+   - Network:      http://172.18.0.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 7.1s
+ ○ Compiling / ...
+ ✓ Compiled / in 12.8s (1139 modules)
+ GET / 200 in 13956ms
+ ✓ Compiled in 2.1s (463 modules)
+ ✓ Compiled in 203ms (449 modules)
+ GET / 200 in 187ms
+ ○ Compiling /prompts ...
+ ✓ Compiled /prompts in 2.2s (1227 modules)
+ GET /prompts 200 in 3024ms
+ ○ Compiling /characters ...
+ ✓ Compiled /characters in 1255ms (1256 modules)
+ GET /characters 200 in 1744ms
+ ○ Compiling /projects ...
+ ✓ Compiled /projects in 1767ms (1289 modules)
+ GET /projects 200 in 2275ms
+ ○ Compiling /storyboard ...
+ ✓ Compiled /storyboard in 987ms (1304 modules)
+ GET /storyboard 200 in 1532ms
+ ○ Compiling /assets ...
+ ✓ Compiled /assets in 1349ms (1325 modules)
+ GET /assets 200 in 1800ms
+ ○ Compiling /editor ...
+ ✓ Compiled /editor in 1750ms (1346 modules)
+ GET /editor 200 in 2212ms
+ ○ Compiling /story-studio ...
+ ✓ Compiled /story-studio in 1124ms (1357 modules)
+ GET /story-studio 200 in 1646ms
+ ○ Compiling /settings ...
+ ✓ Compiled /settings in 1450ms (1370 modules)
+ GET /settings 200 in 1896ms
+ ○ Compiling /history ...
+ ✓ Compiled /history in 1308ms (1379 modules)
+ GET /history 200 in 1708ms
+ ○ Compiling /models ...
+ ✓ Compiled /models in 1432ms (1390 modules)
+ GET /models 200 in 1956ms
+ GET / 200 in 408ms
+ GET / 200 in 239ms
+ GET / 200 in 211ms
+ GET / 200 in 236ms
+ GET /settings 200 in 76ms
+ ○ Compiling /generate-image ...
+ ✓ Compiled /generate-image in 3.1s (1294 modules)
+ GET /generate-image 200 in 3467ms
+ GET /generate-image 200 in 78ms
+ ○ Compiling /image-to-image ...
+ ✓ Compiled /image-to-image in 1116ms (1321 modules)
+ GET /image-to-image 200 in 1326ms
+ ○ Compiling /image-to-video ...
+ ✓ Compiled /image-to-video in 1013ms (1332 modules)
+ GET /image-to-video 200 in 1165ms
+ ○ Compiling /story-studio ...
+ ✓ Compiled /story-studio in 706ms (748 modules)
+ GET /story-studio 200 in 888ms
+ ○ Compiling /prompts ...
+ ✓ Compiled /prompts in 857ms (784 modules)
+ GET /prompts 200 in 1041ms
+ GET /story-studio 200 in 61ms
+ GET /prompts 200 in 45ms
+ ○ Compiling /characters ...
+ ✓ Compiled /characters in 857ms (798 modules)
+ GET /characters 200 in 1016ms
+ ○ Compiling /projects ...
+ ✓ Compiled /projects in 1191ms (815 modules)
+ GET /projects 200 in 1367ms
+ ○ Compiling /storyboard ...
+ ✓ Compiled /storyboard in 852ms (822 modules)
+ GET /storyboard 200 in 1021ms
+ ○ Compiling /assets ...
+ ✓ Compiled /assets in 816ms (820 modules)
+ GET /assets 200 in 969ms
+ ○ Compiling /editor ...
+ ✓ Compiled /editor in 876ms (830 modules)
+ GET /editor 200 in 1010ms
+ GET /prompts 200 in 84ms
+ ✓ Compiled in 7.6s (1385 modules)
+ GET /prompts 200 in 318ms
+ ✓ Compiled in 4.3s (1393 modules)
+ GET /prompts 200 in 333ms
+ ✓ Compiled in 970ms (1379 modules)
+ ✓ Compiled in 3.4s (1393 modules)
+ GET /prompts 200 in 261ms
+ ✓ Compiled in 1864ms (1393 modules)
+ GET /prompts 200 in 188ms
+ ✓ Compiled in 3.5s (1393 modules)
+ GET /prompts 200 in 690ms
+ ✓ Compiled in 1969ms (1379 modules)
+ ✓ Compiled in 3.4s (1393 modules)
+ GET /prompts 200 in 403ms
+ ✓ Compiled in 2.9s (1393 modules)
+ GET /prompts 200 in 209ms
+ ✓ Compiled in 4.2s (1393 modules)
+ GET /prompts 200 in 308ms
+ ✓ Compiled in 1681ms (1393 modules)
+ GET /prompts 200 in 172ms
+ ⨯ ./src/components/projects/ProjectCard.tsx
+Error:   [31mx[0m Unexpected eof
+    ,-[[36;1;4mC:\Users\Lenovo\Documents\Agnes-request\agnes-creator\src\components\projects\ProjectCard.tsx[0m:67:3]
+ [2m65[0m |     </Card>
+ [2m66[0m |   );
+ [2m67[0m | }
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/projects/ProjectCard.tsx
+./src/app/projects/page.tsx
+ ✓ Compiled in 3s (1393 modules)
+ GET /prompts 200 in 262ms
+ ✓ Compiled in 1635ms (1393 modules)
+ GET /prompts 200 in 267ms
+ ✓ Compiled in 4.5s (1393 modules)
+ GET /prompts 200 in 206ms
+ ✓ Compiled in 1011ms (615 modules)
+ GET /prompts 200 in 168ms
+ ✓ Compiled in 2.2s (1393 modules)
+ GET /prompts 200 in 204ms
+ ✓ Compiled in 876ms (615 modules)
+ GET /prompts 200 in 78ms
+ ⨯ ./src/i18n/en-US.ts
+Error:   [31mx[0m Expected ';', '}' or <eof>
+     ,-[[36;1;4mC:\Users\Lenovo\Documents\Agnes-request\agnes-creator\src\i18n\en-US.ts[0m:276:1]
+ [2m273[0m | 
+ [2m274[0m | 
+ [2m275[0m |   // Story Studio - added keys
+ [2m276[0m |   "storyStudio.yourStory": "Your Story",
+     : [35;1m  ^^^^^^^^^^^|^^^^^^^^^^^[0m[33;1m^[0m
+     :              [35;1m`-- [35;1mThis is the expression part of an expression statement[0m[0m
+ [2m277[0m |   "storyStudio.story": "Story",
+ [2m278[0m |   "storyStudio.project": "Project",
+ [2m279[0m |   "storyStudio.scene": "Scene",
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/i18n/en-US.ts
+./src/i18n/index.ts
+./src/app/page.tsx
+ ⨯ ./src/i18n/en-US.ts
+Error:   [31mx[0m Expected ';', '}' or <eof>
+     ,-[[36;1;4mC:\Users\Lenovo\Documents\Agnes-request\agnes-creator\src\i18n\en-US.ts[0m:276:1]
+ [2m273[0m | 
+ [2m274[0m | 
+ [2m275[0m |   // Story Studio - added keys
+ [2m276[0m |   "storyStudio.yourStory": "Your Story",
+     : [35;1m  ^^^^^^^^^^^|^^^^^^^^^^^[0m[33;1m^[0m
+     :              [35;1m`-- [35;1mThis is the expression part of an expression statement[0m[0m
+ [2m277[0m |   "storyStudio.story": "Story",
+ [2m278[0m |   "storyStudio.project": "Project",
+ [2m279[0m |   "storyStudio.scene": "Scene",
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/i18n/en-US.ts
+./src/i18n/index.ts
+./src/app/page.tsx
+ ⨯ ./src/i18n/en-US.ts
+Error:   [31mx[0m Expected ';', '}' or <eof>
+     ,-[[36;1;4mC:\Users\Lenovo\Documents\Agnes-request\agnes-creator\src\i18n\en-US.ts[0m:276:1]
+ [2m273[0m | 
+ [2m274[0m | 
+ [2m275[0m |   // Story Studio - added keys
+ [2m276[0m |   "storyStudio.yourStory": "Your Story",
+     : [35;1m  ^^^^^^^^^^^|^^^^^^^^^^^[0m[33;1m^[0m
+     :              [35;1m`-- [35;1mThis is the expression part of an expression statement[0m[0m
+ [2m277[0m |   "storyStudio.story": "Story",
+ [2m278[0m |   "storyStudio.project": "Project",
+ [2m279[0m |   "storyStudio.scene": "Scene",
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/i18n/en-US.ts
+./src/i18n/index.ts
+./src/app/page.tsx
+ ⨯ ./src/i18n/en-US.ts
+Error:   [31mx[0m Expected ';', '}' or <eof>
+     ,-[[36;1;4mC:\Users\Lenovo\Documents\Agnes-request\agnes-creator\src\i18n\en-US.ts[0m:276:1]
+ [2m273[0m | 
+ [2m274[0m | 
+ [2m275[0m |   // Story Studio - added keys
+ [2m276[0m |   "storyStudio.yourStory": "Your Story",
+     : [35;1m  ^^^^^^^^^^^|^^^^^^^^^^^[0m[33;1m^[0m
+     :              [35;1m`-- [35;1mThis is the expression part of an expression statement[0m[0m
+ [2m277[0m |   "storyStudio.story": "Story",
+ [2m278[0m |   "storyStudio.project": "Project",
+ [2m279[0m |   "storyStudio.scene": "Scene",
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/i18n/en-US.ts
+./src/i18n/index.ts
+./src/app/page.tsx
+ ⨯ ./src/i18n/en-US.ts
+Error:   [31mx[0m Expected ';', '}' or <eof>
+     ,-[[36;1;4mC:\Users\Lenovo\Documents\Agnes-request\agnes-creator\src\i18n\en-US.ts[0m:275:1]
+ [2m272[0m | };
+ [2m273[0m | 
+ [2m274[0m |   // Story Studio - added keys
+ [2m275[0m |   "storyStudio.yourStory": "Your Story",
+     : [35;1m  ^^^^^^^^^^^|^^^^^^^^^^^[0m[33;1m^[0m
+     :              [35;1m`-- [35;1mThis is the expression part of an expression statement[0m[0m
+ [2m276[0m |   "storyStudio.story": "Story",
+ [2m277[0m |   "storyStudio.project": "Project",
+ [2m278[0m |   "storyStudio.scene": "Scene",
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/i18n/en-US.ts
+./src/i18n/index.ts
+./src/app/page.tsx
+ ⨯ ./src/i18n/en-US.ts
+Error:   [31mx[0m Expected ',', got 'Add'
+     ,-[[36;1;4mC:\Users\Lenovo\Documents\Agnes-request\agnes-creator\src\i18n\en-US.ts[0m:320:1]
+ [2m317[0m |   // Storyboard
+ [2m318[0m |   "storyboard.titleWithProject": "Storyboard - {name}",
+ [2m319[0m |   "storyboard.noScenesYet": "No scenes yet",
+ [2m320[0m |   "storyboard.clickAddScene": "Click "Add Scene" to get started",
+     : [35;1m                                      ^^^[0m
+ [2m321[0m |   "storyboard.selectSceneHint": "Select a scene",
+ [2m322[0m |   "storyboard.shotsCount": "{count} shots",
+ [2m323[0m |   "storyboard.noShotsYet": "No shots yet",
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/i18n/en-US.ts
+./src/i18n/index.ts
+./src/app/page.tsx
+ ✓ Compiled in 1144ms (1379 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/prompts'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 10s (1740 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/prompts'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\routes-manifest.json'
+}
+ GET /prompts 500 in 18932ms
+ GET /prompts 500 in 187ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.4s (1731 modules)
+ ⨯ Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\vendor-chunks\next.js'
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js:227:47)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js:230:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\vendor-chunks\\next.js'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\routes-manifest.json'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\routes-manifest.json'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\routes-manifest.json'
+}
+ GET /prompts 500 in 3774ms
+ GET /prompts 500 in 167ms
+ ⨯ Error: Cannot find module './833.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17575)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17636) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/prompts'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+Error: Cannot find module './833.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17575)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17636) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/prompts'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\routes-manifest.json'
+}
+ GET /prompts 500 in 310ms
+ GET /prompts 500 in 94ms
+ ⨯ Error: Cannot find module './833.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17575)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17636) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/prompts'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+Error: Cannot find module './833.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17575)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17636) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/prompts'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\routes-manifest.json'
+}
+ GET /prompts 500 in 306ms
+ GET /prompts 500 in 134ms
+ ⨯ Error: Cannot find module './833.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17575)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17636) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/prompts'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+Error: Cannot find module './833.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17575)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js:2:17636) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/prompts'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\webpack-runtime.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\require.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\load-components.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\utils.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\options.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\swc\index.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\config.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\next.js
+- C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\routes-manifest.json'
+}
+ GET /prompts 500 in 341ms
+ GET /prompts 500 in 125ms
+ ✓ Compiled in 6.8s (1745 modules)
+ ✓ Compiled in 6.3s (1644 modules)
+ ✓ Compiled in 1751ms (1644 modules)
+ ✓ Compiled in 1867ms (1644 modules)
+ ✓ Compiled in 5s (1644 modules)
+ ✓ Compiled in 1635ms (1644 modules)
+ ✓ Compiled in 4.5s (1644 modules)
+ ✓ Compiled in 1386ms (1644 modules)
+ ✓ Compiled in 1424ms (1644 modules)
+ ✓ Compiled in 2.4s (1644 modules)
+ ✓ Compiled in 6.7s (1644 modules)
+ ✓ Compiled in 5.8s (1630 modules)
+ ✓ Compiled in 1802ms (1630 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 5.1s (1635 modules)
+ ⨯ Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\vendor-chunks\next.js'
+    at <unknown> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js:227:47)
+    at Object.<anonymous> (C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\_not-found\page.js:230:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\vendor-chunks\\next.js'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1881ms (1731 modules)
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ GET /prompts 500 in 7765ms
+ GET /prompts 500 in 74ms
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\app\\prompts\\page.js',
+  page: '/prompts'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\prompts\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\app\\prompts\\page.js',
+  page: '/prompts'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ GET /prompts 500 in 300ms
+ GET /prompts 500 in 91ms
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\characters\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\app\\characters\\page.js',
+  page: '/characters'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\characters\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\app\\characters\\page.js',
+  page: '/characters'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ GET /characters 500 in 334ms
+ GET /characters 500 in 139ms
+ ○ Compiling /assets ...
+ ✓ Compiled /assets in 2.9s (985 modules)
+ GET /assets 200 in 3925ms
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\editor\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\app\\editor\\page.js',
+  page: '/editor'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\app\editor\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\app\\editor\\page.js',
+  page: '/editor'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'C:\Users\Lenovo\Documents\Agnes-request\agnes-creator\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Lenovo\\Documents\\Agnes-request\\agnes-creator\\.next\\server\\pages\\_document.js'
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ GET /editor 500 in 387ms
+ GET /editor 500 in 109ms

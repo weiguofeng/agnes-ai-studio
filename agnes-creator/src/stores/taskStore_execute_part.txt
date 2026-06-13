@@ -1,0 +1,63 @@
+﻿// ... keep the first part of the file ...
+
+  async execute(
+    taskId: string,
+    type: TaskType,
+    executor: () => Promise<Record<string, unknown>>,
+  ): Promise<void> {
+    const category = TASK_CATEGORY[type];
+    const store = useTaskStore.getState();
+
+    const run = async () => {
+      this.runningCount[category]++;
+      const controller = new AbortController();
+      this.abortControllers.set(taskId, controller);
+
+      try {
+        store.updateTask(taskId, { status: "processing", progress: 0 });
+        const result = await executor();
+
+        if (controller.signal.aborted) return;
+
+        const resultObj = result as Record<string, unknown>;
+        const url = String(resultObj.url || resultObj.output_url || "");
+
+        if (type.includes("video")) {
+          const apiTaskId = String(
+            resultObj.videoId || resultObj.video_id || resultObj.taskId || resultObj.task_id || ""
+          );
+          if (apiTaskId) {
+            store.updateTask(taskId, { taskId: apiTaskId });
+            await this._startTaskPolling(taskId, apiTaskId);
+          }
+        } else if (url) {
+          store.updateTask(taskId, { status: "completed", progress: 100, resultUrl: url });
+        } else {
+          store.updateTask(taskId, { status: "completed", progress: 100 });
+        }
+      } catch (err: unknown) {
+        if (controller.signal.aborted) return;
+        const isCancelled = err instanceof Error && err.name === "AbortError";
+        store.updateTask(taskId, {
+          status: isCancelled ? "cancelled" : "failed",
+          errorMessage: err instanceof Error ? err.message : "生成失败",
+        });
+      } finally {
+        this.runningCount[category]--;
+        this.abortControllers.delete(taskId);
+        this._processQueue(category);
+      }
+    };
+
+    const max = this.maxConcurrency[category];
+    if (this.runningCount[category] < max) {
+      await run();
+    } else {
+      await new Promise<void>((resolve, reject) => {
+        this.pendingQueue.push({
+          taskId, category,
+          start: async () => { try { await run(); resolve(); } catch (e) { reject(e); } },
+        });
+      });
+    }
+  }
