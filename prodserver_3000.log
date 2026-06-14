@@ -1,0 +1,19 @@
+
+> agnes-creator@0.1.0 start
+> next start -p 3000
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3000
+   - Network:      http://172.18.0.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 2.9s
+[Pipeline Proxy] shot=1960-0-0 开始下载图片 URL: 105 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] shot=1960-0-0 响应: status=200 OK, content-type=image/png, content-length=1587776, 耗时=4488ms
+[Pipeline Proxy] shot=1960-0-0 下载成功: 1550.6 KB, 耗时=12314ms
+[Pipeline Proxy] shot=1960-0-1 开始下载图片 URL: 105 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] shot=1960-0-2 开始下载图片 URL: 105 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] shot=1960-0-2 响应: status=200 OK, content-type=image/png, content-length=1638765, 耗时=2100ms
+[Pipeline Proxy] shot=1960-0-1 响应: status=200 OK, content-type=image/png, content-length=1539076, 耗时=3421ms
+[Pipeline Proxy] shot=1960-0-2 下载成功: 1600.4 KB, 耗时=8807ms
+[Pipeline Proxy] shot=1960-0-1 下载成功: 1503.0 KB, 耗时=12424ms

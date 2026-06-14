@@ -3,11 +3,21 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { indexedDBStorage } from "@/services/IndexedDBStorage";
 import type { ProductionQueueItem, ProductionStatus } from "@/types";
 import { logger } from "@/lib/logger";
+
 interface ProductionQueueState {
   items: ProductionQueueItem[];
   isPaused: boolean;
-  
-  initFromShots: (projectId: string, scenes: Array<{ id: string; title: string; shots: Array<{ id: string; title: string; order: number }> }>) => void;
+  // V2.7: Production mode (draft vs production)
+  productionMode: "draft" | "production";
+  // V2.7: Selected shot IDs for batch operations
+  selectedShotIds: string[];
+
+  setProductionMode: (mode: "draft" | "production") => void;
+  toggleSelectShot: (shotId: string) => void;
+  selectAllShots: (shotIds: string[]) => void;
+  deselectAllShots: () => void;
+
+  initFromShots: (projectId: string, scenes: Array<{ id: string; title: string; shots: Array<{ id: string; title: string; order: number; imagePrompt?: string; videoPrompt?: string; negativePrompt?: string }> }>) => void;
   updateItem: (shotId: string, patch: Partial<ProductionQueueItem>) => void;
   updateImageStatus: (shotId: string, status: ProductionStatus, taskId?: string, resultUrl?: string, error?: string) => void;
   updateVideoStatus: (shotId: string, status: ProductionStatus, taskId?: string, resultUrl?: string, error?: string) => void;
@@ -41,23 +51,66 @@ interface ProductionQueueState {
   incrementVideoRetry: (shotId: string) => void;
   getItems: () => ProductionQueueItem[];
   recoverPendingTasks: () => Array<{ shotId: string; type: "image" | "video" }>;
+  updatePrompt: (shotId: string, prompt: string) => void;
+
+  // V2.7: Batch operations
+  batchRegenImages: (shotIds: string[]) => void;
+  batchRegenVideos: (shotIds: string[]) => void;
+  batchPause: (shotIds: string[]) => void;
+  batchResume: (shotIds: string[]) => void;
+  batchDelete: (shotIds: string[]) => void;
+  batchLock: (shotIds: string[]) => void;
+  getBatchStats: (projectId: string) => {
+    totalShots: number; totalScenes: number;
+    imagesCompleted: number; videosCompleted: number;
+    failedCount: number; pendingCount: number;
+    successRate: number; avgDuration: number;
+    estimatedRemaining: number;
+  };
 }
+
 let _qCounter = 0;
 function genQueueId(): string {
   _qCounter++; return `prod-${Date.now()}-${_qCounter}`;
 }
 const MAX_RETRIES = 3;
+
 export const useProductionQueue = create<ProductionQueueState>()(
   persist(
     (set, get) => ({
       items: [],
       isPaused: false,
+      productionMode: "draft",
+      selectedShotIds: [],
+
+      setProductionMode: (mode) => {
+        logger.info("ProductionQueue", `生产模式切换: ${mode}`);
+        set({ productionMode: mode });
+      },
+
+      toggleSelectShot: (shotId) => set((s) => {
+        const exists = s.selectedShotIds.includes(shotId);
+        return {
+          selectedShotIds: exists
+            ? s.selectedShotIds.filter(id => id !== shotId)
+            : [...s.selectedShotIds, shotId],
+        };
+      }),
+
+      selectAllShots: (shotIds) => set({ selectedShotIds: shotIds }),
+      deselectAllShots: () => set({ selectedShotIds: [] }),
       
       initFromShots: (projectId, scenes) => {
         const items: ProductionQueueItem[] = [];
+        let sceneIdx = 0;
         for (const scene of scenes) {
+          sceneIdx++;
+          let shotIdx = 0;
           for (const shot of scene.shots) {
+            shotIdx++;
             items.push({
+              sceneOrder: sceneIdx,
+              shotOrder: shotIdx,
               id: genQueueId(),
               projectId,
               sceneId: scene.id,
@@ -65,6 +118,9 @@ export const useProductionQueue = create<ProductionQueueState>()(
               shotTitle: shot.title,
               sceneTitle: scene.title,
               order: shot.order,
+              imagePrompt: shot.imagePrompt,
+              videoPrompt: shot.videoPrompt,
+              negativePrompt: shot.negativePrompt,
               imageStatus: "pending",
               videoStatus: "pending",
               imageRetries: 0,
@@ -109,21 +165,20 @@ export const useProductionQueue = create<ProductionQueueState>()(
       resetShot: (shotId) => set((s) => ({
         items: s.items.map((i) => i.shotId === shotId ? {
           ...i, imageStatus: "pending" as ProductionStatus, videoStatus: "pending" as ProductionStatus,
-          imageTaskId: undefined, videoTaskId: undefined,
-          imageResultUrl: undefined, videoResultUrl: undefined,
-          imageError: undefined, videoError: undefined,
-          imageRetries: 0, videoRetries: 0,
+          imageTaskId: undefined, imageResultUrl: undefined, imageError: undefined, imageRetries: 0,
+          videoTaskId: undefined, videoResultUrl: undefined, videoError: undefined, videoRetries: 0,
           imageLocked: false, videoLocked: false,
+          imageStartedAt: undefined, imageCompletedAt: undefined,
+          videoStartedAt: undefined, videoCompletedAt: undefined,
         } : i),
       })),
-      
-      getProjectItems: (projectId) => get().items.filter((i) => i.projectId === projectId),
       
       resetVideoOnly: (shotId) => set((s) => ({
         items: s.items.map((i) => i.shotId === shotId ? {
           ...i, videoStatus: "pending" as ProductionStatus,
           videoTaskId: undefined, videoResultUrl: undefined,
-          videoError: undefined, videoRetries: 0,
+          videoError: undefined, videoRetries: 0, videoLocked: false,
+          videoStartedAt: undefined, videoCompletedAt: undefined,
         } : i),
       })),
       
@@ -131,39 +186,38 @@ export const useProductionQueue = create<ProductionQueueState>()(
         items: s.items.map((i) => i.shotId === shotId ? {
           ...i, imageStatus: "pending" as ProductionStatus,
           imageTaskId: undefined, imageResultUrl: undefined,
-          imageError: undefined, imageRetries: 0,
+          imageError: undefined, imageRetries: 0, imageLocked: false,
+          imageStartedAt: undefined, imageCompletedAt: undefined,
         } : i),
       })),
+      getProjectItems: (projectId) => get().items.filter((i) => i.projectId === projectId),
       
-      // V2.5: Lock/Unlock
       lockImage: (shotId) => set((s) => ({
-        items: s.items.map((i) => i.shotId === shotId ? { ...i, imageLocked: true } : i),
+        items: s.items.map((i) => i.shotId === shotId ? { ...i, imageLocked: true, imageStatus: "image_locked" as ProductionStatus } : i),
       })),
       lockVideo: (shotId) => set((s) => ({
-        items: s.items.map((i) => i.shotId === shotId ? { ...i, videoLocked: true } : i),
+        items: s.items.map((i) => i.shotId === shotId ? { ...i, videoLocked: true, videoStatus: "video_locked" as ProductionStatus } : i),
       })),
       unlockImage: (shotId) => set((s) => ({
-        items: s.items.map((i) => i.shotId === shotId ? { ...i, imageLocked: false } : i),
+        items: s.items.map((i) => i.shotId === shotId ? { ...i, imageLocked: false, imageStatus: i.imageResultUrl ? "completed" as ProductionStatus : "pending" as ProductionStatus } : i),
       })),
       unlockVideo: (shotId) => set((s) => ({
-        items: s.items.map((i) => i.shotId === shotId ? { ...i, videoLocked: false } : i),
+        items: s.items.map((i) => i.shotId === shotId ? { ...i, videoLocked: false, videoStatus: i.videoResultUrl ? "completed" as ProductionStatus : "pending" as ProductionStatus } : i),
       })),
       
-      // V2.5: Delete asset (marks as deleted, keeps metadata)
       deleteImageAsset: (shotId) => set((s) => ({
         items: s.items.map((i) => i.shotId === shotId ? {
           ...i, imageStatus: "image_deleted" as ProductionStatus,
-          imageResultUrl: undefined, imageTaskId: undefined,
+          imageResultUrl: undefined, imageTaskId: undefined, imageLocked: false,
         } : i),
       })),
       deleteVideoAsset: (shotId) => set((s) => ({
         items: s.items.map((i) => i.shotId === shotId ? {
           ...i, videoStatus: "video_deleted" as ProductionStatus,
-          videoResultUrl: undefined, videoTaskId: undefined,
+          videoResultUrl: undefined, videoTaskId: undefined, videoLocked: false,
         } : i),
       })),
       
-      // V2.5: Single-shot regenerate
       regenImageOnly: (shotId) => set((s) => ({
         items: s.items.map((i) => i.shotId === shotId ? {
           ...i, imageStatus: "regenerating_image" as ProductionStatus,
@@ -181,7 +235,6 @@ export const useProductionQueue = create<ProductionQueueState>()(
         } : i),
       })),
       
-      // V2.5: Stats
       getProjectStats: (projectId) => {
         const items = get().items.filter((i) => i.projectId === projectId);
         return {
@@ -193,7 +246,10 @@ export const useProductionQueue = create<ProductionQueueState>()(
         };
       },
       
-      // V2.5: Respect locks when getting pending items
+      updatePrompt: (shotId, prompt) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? { ...i, customPrompt: prompt } : i),
+      })),
+
       getPendingImageItems: (projectId) => get().items.filter(
         (i) => i.projectId === projectId && i.imageStatus === "pending" && !i.imageLocked
       ),
@@ -263,7 +319,83 @@ export const useProductionQueue = create<ProductionQueueState>()(
         }
         return pending;
       },
+
+      // V2.7: Batch operations
+      batchRegenImages: (shotIds) => set((s) => ({
+        items: s.items.map((i) => shotIds.includes(i.shotId) ? {
+          ...i, imageStatus: "regenerating_image" as ProductionStatus,
+          imageTaskId: undefined, imageResultUrl: undefined,
+          imageError: undefined, imageRetries: 0, imageLocked: false,
+        } : i),
+      })),
+
+      batchRegenVideos: (shotIds) => set((s) => ({
+        items: s.items.map((i) => shotIds.includes(i.shotId) ? {
+          ...i, videoStatus: "regenerating_video" as ProductionStatus,
+          videoTaskId: undefined, videoResultUrl: undefined,
+          videoError: undefined, videoRetries: 0, videoLocked: false,
+        } : i),
+      })),
+
+      batchPause: (shotIds) => set((s) => ({
+        items: s.items.map((i) => shotIds.includes(i.shotId) ? {
+          ...i, imageStatus: (i.imageStatus === "generating" ? "pending" as ProductionStatus : i.imageStatus),
+          videoStatus: (i.videoStatus === "generating" ? "pending" as ProductionStatus : i.videoStatus),
+        } : i),
+      })),
+
+      batchResume: (shotIds) => set((s) => ({
+        items: s.items.map((i) => shotIds.includes(i.shotId) ? {
+          ...i, imageStatus: (i.imageStatus === "pending" || i.imageStatus === "failed" ? "pending" as ProductionStatus : i.imageStatus),
+          videoStatus: (i.videoStatus === "pending" || i.videoStatus === "failed" ? "pending" as ProductionStatus : i.videoStatus),
+          imageError: undefined, videoError: undefined,
+        } : i),
+      })),
+
+      batchDelete: (shotIds) => set((s) => ({
+        items: s.items.map((i) => shotIds.includes(i.shotId) ? {
+          ...i, imageStatus: "image_deleted" as ProductionStatus,
+          videoStatus: "video_deleted" as ProductionStatus,
+          imageResultUrl: undefined, videoResultUrl: undefined,
+          imageTaskId: undefined, videoTaskId: undefined,
+          imageLocked: false, videoLocked: false,
+        } : i),
+      })),
+
+      batchLock: (shotIds) => set((s) => ({
+        items: s.items.map((i) => shotIds.includes(i.shotId) ? {
+          ...i, imageLocked: true, videoLocked: true,
+          imageStatus: "image_locked" as ProductionStatus,
+          videoStatus: "video_locked" as ProductionStatus,
+        } : i),
+      })),
+
+      getBatchStats: (projectId) => {
+        const items = get().items.filter((i) => i.projectId === projectId);
+        const totalShots = items.length;
+        const totalScenes = new Set(items.map(i => i.sceneId)).size;
+        const imagesCompleted = items.filter(i => i.imageStatus === "completed").length;
+        const videosCompleted = items.filter(i => i.videoStatus === "completed").length;
+        const failedCount = items.filter(i => i.imageStatus === "failed" || i.videoStatus === "failed").length;
+        const pendingCount = items.filter(i => i.imageStatus === "pending" || i.videoStatus === "pending").length;
+        const successRate = totalShots > 0 ? Math.round((videosCompleted / totalShots) * 100) : 0;
+
+        // Calculate average duration from completed items
+        const completedItems = items.filter(i => i.imageCompletedAt && i.imageStartedAt);
+        const avgDuration = completedItems.length > 0
+          ? Math.round(completedItems.reduce((sum, i) => sum + (i.imageCompletedAt! - i.imageStartedAt!), 0) / completedItems.length / 1000)
+          : 0;
+
+        // Estimated remaining time
+        const remainingItems = items.filter(i => i.videoStatus !== "completed" && i.videoStatus !== "failed");
+        const estimatedRemaining = avgDuration > 0 ? Math.round((remainingItems.length * avgDuration) / 60) : 0;
+
+        return {
+          totalShots, totalScenes, imagesCompleted, videosCompleted,
+          failedCount, pendingCount, successRate, avgDuration, estimatedRemaining,
+        };
+      },
     }),
-    { name: "agnes-production-queue", version: 4, storage: createJSONStorage(() => indexedDBStorage) }
+    { name: "agnes-production-queue", version: 5, storage: createJSONStorage(() => indexedDBStorage) }
   )
 );

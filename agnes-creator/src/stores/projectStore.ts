@@ -36,6 +36,7 @@ export const useProjectStore = create<ProjectStoreState>()(
           projects: [{
             ...data, id, scenes: [], characters: [], assets: [],
             styleDna: data.styleDna || "",
+            storyScript: data.storyScript || "",
             lockedCharacterIds: data.lockedCharacterIds || [],
             createdAt: now, updatedAt: now,
           } as Project, ...s.projects],

@@ -1,4 +1,4 @@
-﻿// ========== Prompt Types ==========
+// ========== Prompt Types ==========
 export interface PromptTemplate {
   id: string;
   name: string;
@@ -66,6 +66,7 @@ export interface Project {
   id: string;
   name: string;
   description: string;
+  storyScript?: string;
   thumbnail?: string;
   tags: string[];
   status: ProjectStatus;
@@ -89,9 +90,6 @@ export interface Scene {
   title: string;
   description: string;
   order: number;
-  /** V2.6: Scene/Shot numbering */
-  sceneOrder: number;
-  shotOrder: number;
   shots: Shot[];
   prompt?: string;
   renderedPrompt?: string;
@@ -249,6 +247,9 @@ export interface ProductionQueueItem {
   shotTitle: string;
   sceneTitle: string;
   order: number;
+  /** V2.6: Scene/Shot numbering */
+  sceneOrder: number;
+  shotOrder: number;
   /** Image generation */
   imageStatus: ProductionStatus;
   imageTaskId?: string;
@@ -269,6 +270,11 @@ export interface ProductionQueueItem {
   /** V2.5: Video lock */
   videoLocked: boolean;
   videoCompletedAt?: number;
+  /** V2.7: Custom editable prompt */
+  imagePrompt?: string;
+  videoPrompt?: string;
+  negativePrompt?: string;
+  customPrompt?: string;
 }
 
 /** Prompt pack for a shot */

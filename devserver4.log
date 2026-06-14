@@ -1,0 +1,16 @@
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3000
+   - Network:      http://172.18.0.1:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 8.4s
+ ○ Compiling /pipeline ...
+ ✓ Compiled /pipeline in 8.9s (1300 modules)
+ GET /pipeline 200 in 14001ms
+ ✓ Compiled in 5.3s (547 modules)
+ ✓ Compiled in 321ms (533 modules)
+ GET /pipeline 200 in 456ms
+ ✓ Compiled in 2.1s (1300 modules)
+ GET /pipeline 200 in 990ms
+ GET /pipeline 200 in 333ms

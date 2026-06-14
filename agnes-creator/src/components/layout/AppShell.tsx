@@ -23,9 +23,9 @@ export function AppShell({ children }: AppShellProps) {
     <LanguageProvider><QueryClientProvider client={queryClient}>
       <div className="min-h-screen">
         <Sidebar />
-        <div className="pl-60">
+        <div className="lg:pl-60">
           <TopBar />
-          <main className="p-6">{children}</main>
+          <main className="p-4 sm:p-6">{children}</main>
         </div>
       </div>
     </QueryClientProvider></LanguageProvider>

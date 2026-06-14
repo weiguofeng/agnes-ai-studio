@@ -18,6 +18,7 @@ const navItems = [
   "sep2",
   { href: "/story-studio", label: "menu.aiStoryStudio", icon: Wand2 },
   { href: "/pipeline", label: "menu.pipeline", icon: Factory },
+  { href: "/recovery", label: "menu.recoveryCenter", icon: History },
   { href: "/prompts", label: "menu.promptWorkflow", icon: BookTemplate },
   { href: "/characters", label: "menu.characterLibrary", icon: Users },
   { href: "/projects", label: "menu.projectManagement", icon: FolderKanban },
@@ -35,23 +36,23 @@ export function Sidebar() {
   const isActive = (href: string) => { if (href === "/") return pathname === "/"; return pathname.startsWith(href); };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-60 flex-col border-r bg-card">
-      <div className="flex h-14 items-center gap-2 border-b px-6">
+    <aside className="sticky top-0 z-40 flex max-h-[45vh] flex-col border-b bg-card lg:fixed lg:left-0 lg:top-0 lg:h-screen lg:max-h-none lg:w-60 lg:border-b-0 lg:border-r">
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b px-4 lg:px-6">
         <Sparkles className="h-5 w-5 text-primary" />
         <span className="font-semibold text-lg">{t("sidebar.appName")}</span>
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="flex gap-2 overflow-x-auto p-2 lg:flex-1 lg:flex-col lg:space-y-1 lg:overflow-x-visible lg:overflow-y-auto lg:p-3">
         {navItems.map(function(item, _index) {
           if (typeof item === "string") return <Separator key={item} className="my-3" />;
           const Icon = item.icon;
           return (
-            <Button key={item.href} variant={isActive(item.href) ? "secondary" : "ghost"} className={cn("w-full justify-start gap-3", isActive(item.href) && "bg-secondary font-medium")} asChild>
+            <Button key={item.href} variant={isActive(item.href) ? "secondary" : "ghost"} className={cn("shrink-0 justify-start gap-2 lg:w-full lg:gap-3", isActive(item.href) && "bg-secondary font-medium")} asChild>
               <Link href={item.href}><Icon className="h-4 w-4" />{t(item.label)}</Link>
             </Button>
           );
         })}
       </nav>
-      <div className="border-t p-4"><p className="text-xs text-muted-foreground text-center">{t("sidebar.appName")} {t("sidebar.version")}</p></div>
+      <div className="hidden border-t p-4 lg:block"><p className="text-xs text-muted-foreground text-center">{t("sidebar.appName")} {t("sidebar.version")}</p></div>
     </aside>
   );
 }

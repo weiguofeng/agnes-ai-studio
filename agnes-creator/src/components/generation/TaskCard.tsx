@@ -102,7 +102,7 @@ export function TaskCard({ task, onCancel, onRemove, onDownload }: TaskCardProps
         <div className="mt-3 space-y-3">
           {showVideo ? (
             <div className="rounded-lg overflow-hidden bg-black">
-              <video src={task.result.url} controls autoPlay className="w-full max-h-[300px]">您的浏览器不支持视频播放</video>
+              <video src={task.result.url} controls autoPlay muted className="w-full max-h-[300px]">您的浏览器不支持视频播放</video>
             </div>
           ) : (
             <div onClick={() => setShowVideo(true)}

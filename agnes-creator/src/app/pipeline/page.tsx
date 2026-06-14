@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,39 +12,44 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Wand2, ImageIcon, Video, Film, Download, Play, Pause,
-  CheckCircle2, XCircle, Loader2, Clock, RefreshCw, ArrowRight,
-  Sparkles, Users, BookTemplate, FolderKanban, FileJson, FileText, Archive,
-  Share2, Eye, EyeOff, Lock, Trash2,
+  Download, CheckCircle2, Loader2, Sparkles, Users, BookTemplate, FileJson, FileText, Archive, LayoutDashboard,
 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useProjectStore } from "@/stores/projectStore";
 import { useProductionQueue } from "@/stores/productionQueueStore";
-import { taskManager as servicesTaskManager } from "@/services/taskManager";
 import { agnes } from "@/services/agnes";
 import { useConfigStore } from "@/stores/configStore";
-import { useTaskStore, taskManager as storeTaskManager } from "@/stores/taskStore";
 import { logger } from "@/lib/logger";
-import { classifyError, withRetry } from "@/lib/errorHandler";
-import { asyncMapThrottled, DEFAULT_CONCURRENCY, DEFAULT_THROTTLE_MS } from "@/lib/concurrency";
-import { useCharacterStore, generateCharacterDna } from "@/stores/characterStore";
+import { useCharacterStore } from "@/stores/characterStore";
 import { useEditorStore } from "@/stores/editorStore";
 import { StorageService } from "@/services/StorageService";
-import { parseStoryToScenes, generateAllPromptPacks } from "@/lib/promptPackGenerator";
-import { downloadImageWithRetry, mapErrorToProductionStatus, getImageFetchErrorLabel } from "@/services/pipelineImageDownloader";
-import type { Scene, Shot, Character, ProductionStatus, PromptPack, ProjectExport } from "@/types";
+import { parseStoryToScenes, generateAllPromptPacks, generatePromptPack } from "@/lib/promptPackGenerator";
+import { downloadImageWithRetry, mapErrorToProductionStatus } from "@/services/pipelineImageDownloader";
+import { ErrorClassifier } from "@/services/errorClassifier";
+import type { Scene, Shot, Character, PromptPack, ProjectExport, ShotType } from "@/types";
+import { startAutoSave, stopAutoSave, getLastSavedAt, markDirty } from "@/services/ProjectAutoSaveService";
+import { usePromptHistoryStore } from "@/stores/promptHistoryStore";
+import { useTaskStore } from "@/stores/taskStore";
+import { StatisticsPanel } from "@/components/pipeline/StatisticsPanel";
+import { QueueCardView } from "@/components/pipeline/QueueCardView";
+import { BatchOperations } from "@/components/pipeline/BatchOperations";
+import { TimelineImport } from "@/components/pipeline/TimelineImport";
+import { StorageMonitor } from "@/components/pipeline/StorageMonitor";
+import { ProductionModeToggle } from "@/components/pipeline/ProductionModeToggle";
+import { CurrentTasksWidget } from "@/components/pipeline/CurrentTasksWidget";
 
-// ============================================================
-// Sub-component: {t("pipeline.characterDna")} Panel (Phase 1)
-// ============================================================
+function isLikelyShortPrompt(prompt: string | undefined, shotTitle?: string): boolean {
+  const value = (prompt || "").trim();
+  if (!value) return true;
+  if (shotTitle && value === shotTitle.trim()) return true;
+  return value.length < 80 && /^(镜头|Shot)\s*\d*[:：]/i.test(value) && value.endsWith("...");
+}
+
 function CharacterDnaPanel({ project, characters }: { project: any; characters: Character[] }) {
   const { t } = useTranslation();
-  
   const { lockCharacter, unlockCharacter } = useProjectStore();
   const { setLocked } = useCharacterStore();
   const lockedChars = project.lockedCharacterIds || [];
-  const projectChars = characters.filter((c) => !c.projectId || c.projectId === project.id || lockedChars.includes(c.id));
-  const [selectedChar, setSelectedChar] = useState<string>("");
 
   const handleToggleLock = (charId: string) => {
     const isLocked = lockedChars.includes(charId);
@@ -67,7 +72,6 @@ function CharacterDnaPanel({ project, characters }: { project: any; characters: 
         <CardDescription>{t("pipeline.characterDnaDesc")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Locked Characters */}
         {lockedChars.length > 0 && (
           <div className="space-y-3">
             <Label>{t("pipeline.lockedCharacters")}</Label>
@@ -87,207 +91,190 @@ function CharacterDnaPanel({ project, characters }: { project: any; characters: 
                       {t("pipeline.unlock")}
                     </Button>
                   </div>
-                  {/* DNA Block */}
                   <div className="rounded bg-muted/50 p-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium text-muted-foreground">Character DNA</span>
                       <span className="text-xs text-muted-foreground">auto-injected</span>
                     </div>
-                    <p className="text-xs text-muted-foreground/80 leading-relaxed">{char.dnaBlock || generateCharacterDna(char)}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{char.dnaBlock}</p>
                   </div>
-                  {/* Profile */}
-                  {char.profile && (char.profile.age || char.profile.gender) && (
-                    <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                      {char.profile.age && <div>Age: <span className="text-foreground">{char.profile.age}</span></div>}
-                      {char.profile.gender && <div>Gender: <span className="text-foreground">{char.profile.gender}</span></div>}
-                      {char.profile.appearance && <div className="col-span-3">Appearance: <span className="text-foreground">{char.profile.appearance}</span></div>}
-                      {char.profile.clothing && <div className="col-span-2">Clothing: <span className="text-foreground">{char.profile.clothing}</span></div>}
-                    </div>
-                  )}
-                  {/* Reference images */}
-                  {char.references.length > 0 && (
-                    <div className="flex gap-2">
-                      {char.references.map((ref, i) => (
-                        <div key={i} className="relative group">
-                          <img src={ref.url} alt={ref.label || ref.type} className="w-12 h-12 rounded object-cover border" />
-                          <span className="absolute -top-1.5 -right-1.5 text-[9px] bg-background px-1 rounded border">{ref.type[0]}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               );
             })}
           </div>
         )}
-
-        {/* {t("pipeline.availableCharacters")} */}
-        <div className="space-y-2">
-          <Label>Available Characters</Label>
-          <div className="flex flex-wrap gap-2">
-            {projectChars.filter((c) => !lockedChars.includes(c.id)).length === 0 && lockedChars.length > 0 && (
-              <span className="text-xs text-muted-foreground">{t("pipeline.allLocked")}</span>
-            )}
-            {projectChars.filter((c) => !lockedChars.includes(c.id)).map((char) => (
-              <Badge key={char.id} variant="outline" className="cursor-pointer hover:bg-primary/10 gap-1 py-1.5" onClick={() => handleToggleLock(char.id)}>
-                <Users className="h-3 w-3" />
-                {char.name}
-                <span className="text-[9px] text-muted-foreground ml-1">+Lock</span>
-              </Badge>
-            ))}
-            {projectChars.length === 0 && (
-              <span className="text-xs text-muted-foreground">{t("pipeline.noCharacters")}</span>
-            )}
-          </div>
+        <div className="space-y-3">
+          <Label>{t("pipeline.availableCharacters")}</Label>
+          {lockedChars.length === characters.length ? (
+            <p className="text-sm text-muted-foreground">{t("pipeline.allLocked")}</p>
+          ) : characters.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("pipeline.noCharacters")}</p>
+          ) : (
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {characters.filter((c) => !lockedChars.includes(c.id)).map((char) => (
+                <div key={char.id} className="flex items-center justify-between rounded-lg border p-2">
+                  <span className="text-sm font-medium">{char.name}</span>
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleToggleLock(char.id)}>
+                    {t("pipeline.lockCharacter")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-// ============================================================
-// Sub-component: {t("pipeline.storyToStoryboard")} (Phase 2+3)
-// ============================================================
 function StoryboardGenerator({ project, characters }: { project: any; characters: Character[] }) {
-  const { t, language } = useTranslation();
-  const [story, setStory] = useState("");
-  const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
-  const [promptPacks, setPromptPacks] = useState<PromptPack[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const { addSceneToProject, setStyleDna } = useProjectStore();
+  const { t } = useTranslation();
+  const { updateProject } = useProjectStore();
   const { initFromShots } = useProductionQueue();
-  const [styleDnaInput, setStyleDnaInput] = useState(project.styleDna || "");
+  const [story, setStory] = useState(project.storyScript || "");
+  const [styleDna, setStyleDna] = useState(project.styleDna || "");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
+  const [generatedPacks, setGeneratedPacks] = useState<PromptPack[]>([]);
+  const lockedChars = (project.lockedCharacterIds || []).map((id: string) => characters.find((c) => c.id === id)).filter(Boolean);
 
-  const handleGenerate = useCallback(() => {
-    if (!story.trim()) return;
+  useEffect(() => {
+    setStory(project.storyScript || "");
+    setStyleDna(project.styleDna || "");
+  }, [project.id, project.storyScript, project.styleDna]);
+
+  const handleStoryChange = (value: string) => {
+    setStory(value);
+    updateProject(project.id, { storyScript: value });
+    markDirty();
+  };
+
+  const handleStyleDnaChange = (value: string) => {
+    setStyleDna(value);
+    updateProject(project.id, { styleDna: value });
+    markDirty();
+  };
+
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    
-    // Parse story into scenes (simulated via promptPackGenerator)
-    const parsed = parseStoryToScenes(story, language);
-    
-    // Convert to Scene objects
-    let sceneCounter = 0;
-    let shotCounter = 0;
-    const scenes: Scene[] = parsed.map((s, si) => {
-      sceneCounter++;
-      const sceneId = `scene-${Date.now()}-${sceneCounter}`;
-      const shots: Shot[] = s.shots.map((sh, ji) => {
-        shotCounter++;
+    try {
+      const rawScenes = await parseStoryToScenes(story, "zh-CN");
+      updateProject(project.id, { storyScript: story, styleDna });
+      const now = Date.now();
+      const scenes: Scene[] = rawScenes.map((rs, i) => {
+        const sceneId = `scene-${now}-${i}`;
         return {
-          id: `shot-${Date.now()}-${sceneCounter}-${ji + 1}`,
-          sceneId,
-          title: sh.title,
-          description: sh.description,
-          order: sh.order,
-          type: "video",
-          prompt: sh.description,
-          renderedPrompt: sh.description,
-          negativePrompt: "",
-          characterIds: project.lockedCharacterIds || [],
+          id: sceneId,
+          projectId: project.id,
+          title: rs.title,
+          description: rs.description,
+          order: i,
+          shots: rs.shots.map((sh, j) => ({
+            id: `shot-${now}-${i}-${j}`,
+            sceneId,
+            title: sh.title,
+            description: sh.description,
+            order: j,
+            type: "image" as ShotType,
+            prompt: sh.description || sh.title || "",
+            renderedPrompt: "",
+            negativePrompt: "",
+            characterIds: [],
+            assetIds: [],
+            duration: 5,
+            createdAt: now,
+            updatedAt: now,
+          })),
+          characterIds: [],
           assetIds: [],
-          duration: 3,
-          transition: "cut",
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: now,
+          updatedAt: now,
         };
       });
-      return {
-        id: sceneId,
-        projectId: project.id,
-        title: s.title,
-        description: s.description,
-        order: si + 1,
-        shots,
-        characterIds: project.lockedCharacterIds || [],
-        assetIds: [],
-        cameraAngle: s.cameraAngle,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-    });
-
-    // Add scenes to project
-    for (const scene of scenes) {
-      addSceneToProject(project.id, scene);
+      setGeneratedScenes(scenes);
+      if (scenes.length > 0) {
+        const packs = await generateAllPromptPacks(scenes, lockedChars, styleDna);
+        setGeneratedPacks(packs);
+        updateProject(project.id, { scenes });
+        initFromShots(project.id, scenes.map((s) => ({
+          id: s.id, title: s.title,
+          shots: s.shots.map((sh) => {
+            const pack = packs.find((p) => p.shotId === sh.id);
+            return {
+              id: sh.id,
+              title: sh.title,
+              order: sh.order,
+              imagePrompt: pack?.imagePrompt || sh.renderedPrompt || sh.prompt || sh.description || sh.title,
+              videoPrompt: pack?.videoPrompt || sh.renderedPrompt || sh.prompt || sh.description || sh.title,
+              negativePrompt: pack?.negativePrompt || sh.negativePrompt,
+            };
+          }),
+        })));
+      }
+    } catch (err) {
+      logger.error("StoryboardGenerator", "生成失败", { error: String(err) });
     }
-
-    // Generate prompt packs
-    const packs = generateAllPromptPacks(scenes, characters, styleDnaInput);
-    
-    // Init production queue
-    initFromShots(project.id, scenes.map((s) => ({
-      id: s.id, title: s.title,
-      shots: s.shots.map((sh) => ({ id: sh.id, title: sh.title, order: sh.order })),
-    })));
-
-    // Save style DNA
-    if (styleDnaInput) setStyleDna(project.id, styleDnaInput);
-
-    setGeneratedScenes(scenes);
-    setPromptPacks(packs);
     setIsGenerating(false);
-  }, [story, project.id, project.lockedCharacterIds, characters, styleDnaInput, addSceneToProject, setStyleDna, initFromShots]);
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <BookTemplate className="h-5 w-5" />
-          Story → Storyboard Pipeline
+          {t("pipeline.storyToStoryboard")}
         </CardTitle>
-        <CardDescription>Enter a story, auto-generate storyboard, prompts, and production queue</CardDescription>
+        <CardDescription>{t("pipeline.subtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Story Input */}
         <div className="space-y-2">
-          <Label>Story Text</Label>
-          <Textarea
-            value={story}
-            onChange={(e) => setStory(e.target.value)}
-            placeholder="Enter your story here... e.g. Harry discovers a mysterious magic book in Hogwarts..."
-            className="min-h-[100px]"
-          />
+          <Label>{t("pipeline.yourStory")}</Label>
+          <Textarea value={story} onChange={(e) => handleStoryChange(e.target.value)} placeholder={t("pipeline.enterStory")} className="min-h-[100px]" />
         </div>
-
-        {/* Style DNA */}
         <div className="space-y-2">
           <Label>{t("pipeline.styleDna")}</Label>
-          <Input value={styleDnaInput} onChange={(e) => setStyleDnaInput(e.target.value)} placeholder="e.g. cinematic, fantasy, dark moody, pixar style" />
+          <Input value={styleDna} onChange={(e) => handleStyleDnaChange(e.target.value)} placeholder={t("pipeline.styleDnaPlaceholder")} />
         </div>
-
-        <Button onClick={handleGenerate} disabled={!story.trim() || isGenerating} className="gap-2">
-          {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-          {t("pipeline.generateStoryboard")} & Prompts
+        <Button onClick={handleGenerate} disabled={isGenerating || !story.trim()}>
+          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+          {t("pipeline.generateStoryboard")}
         </Button>
-
-        {/* Generated Scenes Preview */}
         {generatedScenes.length > 0 && (
-          <div className="space-y-3 mt-4">
+          <div className="space-y-3">
             <Separator />
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Generated: {generatedScenes.length} Scenes, {generatedScenes.reduce((a, s) => a + s.shots.length, 0)} Shots</Label>
-            </div>
-            {generatedScenes.map((scene) => (
-              <div key={scene.id} className="rounded-lg border bg-white/[0.02] p-3">
-                <div className="flex items-center justify-between mb-2">
+            <Label>{t("pipeline.scenes")} ({generatedScenes.length})</Label>
+            {generatedScenes.map((scene, si) => (
+              <div key={scene.id} className="rounded-lg border p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">Sc{si + 1}</Badge>
                   <span className="font-medium text-sm">{scene.title}</span>
-                  <Badge variant="outline" className="text-[10px]">{scene.cameraAngle}</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mb-2">{scene.description.substring(0, 120)}...</p>
-                <div className="space-y-1">
-                  {scene.shots.map((shot) => {
-                    const pack = promptPacks.find((p) => p.shotId === shot.id);
-                    return (
-                      <div key={shot.id} className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 rounded p-1.5">
-                        <span className="font-medium text-foreground shrink-0 w-14">Shot {shot.order}:</span>
-                        <span className="truncate flex-1">{shot.description}</span>
-                        {pack && <Badge variant="outline" className="text-[9px] shrink-0">Prompt ready</Badge>}
+                <p className="text-xs text-muted-foreground">{scene.description}</p>
+                {scene.shots.length > 0 && (
+                  <div className="space-y-1.5 pl-4 border-l-2 border-muted">
+                    {scene.shots.map((shot, shi) => (
+                      <div key={shot.id} className="text-xs">
+                        <span className="font-mono text-muted-foreground">Sh{shi + 1}: </span>
+                        <span>{shot.title}</span>
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+        )}
+        {generatedPacks.length > 0 && (
+          <div className="space-y-2">
+            <Separator />
+            <Label>{t("pipeline.prompts")} ({generatedPacks.length})</Label>
+            <div className="max-h-[200px] overflow-y-auto space-y-1">
+              {generatedPacks.map((pack) => (
+                <div key={pack.shotId} className="rounded bg-muted/50 p-2">
+                  <p className="text-[10px] font-mono text-muted-foreground truncate">{pack.imagePrompt}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>
@@ -295,581 +282,435 @@ function StoryboardGenerator({ project, characters }: { project: any; characters
   );
 }
 
-// ============================================================
-// Sub-component: {t("pipeline.productionQueue")} (Phase 4+5+6)
-// ============================================================
-function ProductionQueuePanel({ project }: { project: any }) {
+function ProductionQueuePanel({ project, characters }: { project: any; characters: Character[] }) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"all" | "images" | "videos">("all");
-  const { items, isPaused, setPaused, updateImageStatus, updateVideoStatus, resetShot, resetVideoOnly, resetImageOnly } = useProductionQueue();
-  const projectItems = items.filter((i) => i.projectId === project.id);
+  const queue = useProductionQueue();
+  const config = useConfigStore();
+  const editorStore = useEditorStore();
+  const [processingImages, setProcessingImages] = useState<Set<string>>(new Set());
+  const [processingVideos, setProcessingVideos] = useState<Set<string>>(new Set());
+  const videoAbortControllers = useRef<Map<string, AbortController>>(new Map());
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [videoUrls, setVideoUrls] = useState<Record<string, string>>({});
 
-  const generateImages = useCallback(async () => {
-    if (isPaused) return;
-    const pending = projectItems.filter((i) => i.imageStatus === "pending");
-    if (pending.length === 0) return;
-    logger.info("Pipeline", `批量生成图片: ${pending.length} 个`);
-    
-    await asyncMapThrottled(pending, DEFAULT_CONCURRENCY, DEFAULT_THROTTLE_MS, async (item) => {
-      // Check pause before each item
-      if (useProductionQueue.getState().isPaused) {
-        logger.info("Pipeline", "批量图片生成已暂停");
-        return;
-      }
-      
-      updateImageStatus(item.shotId, "generating");
-      
-      const { data, error } = await withRetry(
-        async () => {
-          const config = useConfigStore.getState();
-          const result = await servicesTaskManager.createTask({
-            type: "text-to-image",
-            model: config.textToImageModel || "black-forest-labs/FLUX.1.1-pro",
-            prompt: item.shotTitle || "a scene",
-            params: { size: "1024x1024" },
-          });
-          return result;
-        },
-        { maxRetries: 2 },
-        "Pipeline-Image"
-      );
-      
-      if (error) {
-        useProductionQueue.getState().incrementImageRetry(item.shotId);
-        logger.error("Pipeline", `图片生成失败: ${item.shotTitle}`, { error: error.message });
-      } else if (data) {
-        updateImageStatus(item.shotId, "completed", data.taskId, data.resultUrl || data.thumbnail);
-        logger.info("Pipeline", `图片生成成功: ${item.shotTitle}`);
-      }
-    });
-    
-    logger.info("Pipeline", "批量图片生成完成");
-  }, [projectItems, updateImageStatus, isPaused]);
+  const projectScenes = useMemo(() => project.scenes || [], [project.scenes]);
+  const projectItems = useMemo(() => queue.getProjectItems(project.id), [queue, project.id]);
+  const lockedCharacters = useMemo(() => {
+    const lockedIds = project.lockedCharacterIds || [];
+    return characters.filter((character) => lockedIds.includes(character.id));
+  }, [characters, project.lockedCharacterIds]);
+  const selectedIds = queue.selectedShotIds;
 
-  const generateVideos = useCallback(async () => {
-    if (isPaused) return;
-    const pending = projectItems.filter((i) => i.imageStatus === "completed" && i.videoStatus === "pending");
-    if (pending.length === 0) return;
-    logger.info("Pipeline", "批量生成视频: " + pending.length + " 个");
-
-    await asyncMapThrottled(pending, 1, 1000, async (item) => {
-      if (useProductionQueue.getState().isPaused) {
-        logger.info("Pipeline", "批量视频生成已暂停");
-        return;
-      }
-
-      const config = useConfigStore.getState();
-      const model = config.imageToVideoModel || "agnes-video-v2.0";
-
-      updateVideoStatus(item.shotId, "generating");
-
-      // ========== 第一阶段：图片诊断与下载 ==========
-      if (!item.imageResultUrl) {
-        logger.error("Pipeline", "镜头 " + (item.shotTitle || "") + " 没有图片结果URL，无法生成图生视频");
-        useProductionQueue.getState().updateVideoStatus(
-          item.shotId, "image_fetch_failed", "", "",
-          "缺少图片结果URL，请先完成图片生成"
-        );
-        return;
-      }
-
-      // 下载图片（含重试 3 次：10s / 30s / 60s）
-      const downloadResult = await downloadImageWithRetry(item.imageResultUrl, {
-        shotId: item.shotId,
-        maxRetries: 3,
-      });
-
-      if (!downloadResult.success) {
-        // 图片不可用 → 标记精确错误 → 禁止文生视频降级
-        const productionStatus = mapErrorToProductionStatus(downloadResult.errorType);
-        const errorLabel = getImageFetchErrorLabel(downloadResult.errorType);
-        const errorMessage = "图生视频失败 - " + errorLabel + ": " + downloadResult.errorMessage;
-
-        logger.error("Pipeline", errorMessage);
-        useProductionQueue.getState().updateVideoStatus(item.shotId, productionStatus, "", "", errorMessage);
-        return;
-      }
-
-      // ========== 第二阶段：图片验证 ==========
-      if (!downloadResult.dataUrl) {
-        logger.error("Pipeline", "图片下载成功但数据为空");
-        useProductionQueue.getState().updateVideoStatus(item.shotId, "image_fetch_failed", "", "", "图片下载成功但数据为空");
-        return;
-      }
-
-      const imageFile = dataUrlToFile(downloadResult.dataUrl, "shot-" + item.shotId + ".png", downloadResult.mimeType || "image/png");
-
-      if (!imageFile || imageFile.size === 0) {
-        logger.error("Pipeline", "图片转换失败或内容为空");
-        useProductionQueue.getState().updateVideoStatus(item.shotId, "image_fetch_failed", "", "", "图片文件转换失败");
-        return;
-      }
-
-      logger.info("Pipeline", "图片下载成功: " + (downloadResult.fileSize ? (downloadResult.fileSize / 1024).toFixed(1) + " KB" : "? KB"));
-
-      // ========== 第三阶段：执行图生视频 API 调用 ==========
-      const store = useTaskStore.getState();
-      const taskId = store.addTask({
-        taskId: "", type: "image-to-video",
-        model: model,
-        prompt: item.shotTitle || "animate this scene",
-        status: "uploading", progress: 0,
-        resultUrl: "", thumbnail: item.imageResultUrl || "",
-        sourcePreview: item.imageResultUrl || undefined,
-        errorMessage: "", params: {},
-      });
-
-      // ========== 第三阶段（续）：提交视频到 Agnes API ==========
-      // 分开提交和等待，避免 withRetry 在等待失败时重复提交视频（重复视频 → 轮询堆积 → 页面卡死）
-      const submitResult = await withRetry(
-        async () => {
-          await storeTaskManager.execute(taskId, "image-to-video", function() {
-            return agnes.video.createFromImage({
-              image: imageFile,
-              prompt: item.shotTitle || "animate this scene",
-              model: model,
-            });
-          });
-          return true;
-        },
-        { maxRetries: 1 },
-        "Pipeline-Video-Submit"
-      );
-
-      if (submitResult.error) {
-        useProductionQueue.getState().updateVideoStatus(item.shotId, "video_api_failed", "", "", submitResult.error.message);
-        logger.error("Pipeline", "图生视频提交失败: " + (item.shotTitle || "") + " - " + submitResult.error.message);
-        return;
-      }
-
-      // ========== 第四阶段：等待视频生成完成 ==========
-      // 不在 withRetry 中等待：
-      //   1) 重试时不会重复提交视频 → 不会产生多个并发轮询任务
-      //   2) 轮询任务不堆积 → 浏览器网络连接池不耗尽 → 页面不卡死
-      //   3) 用 await 让出事件循环 → 保持页面 JS 线程响应
-      let videoResultUrl = "";
-      const pollStartTime = Date.now();
-      const pollTimeout = 600000;
-      let lastState = "";
-
-      while (Date.now() - pollStartTime < pollTimeout) {
-        const current = useTaskStore.getState().getTaskById(taskId);
-        if (current) {
-          if (current.status === "completed" && current.resultUrl) {
-            videoResultUrl = current.resultUrl;
-            break;
-          }
-          const s = current.status;
-          if (s !== lastState) lastState = s;
-          if (s === "failed" || s === "timeout" || s === "cancelled") break;
-        }
-        await new Promise(function(r) { setTimeout(r, 3000); });
-      }
-
-      // ========== 第五阶段：更新队列状态 ==========
-      if (videoResultUrl) {
-        updateVideoStatus(item.shotId, "completed", taskId, videoResultUrl);
-        logger.info("Pipeline", "图生视频成功: " + (item.shotTitle || ""));
-      } else {
-        var emsg;
-        if (lastState === "failed" || lastState === "timeout" || lastState === "cancelled") {
-          emsg = "视频" + lastState;
-        } else {
-          emsg = "视频生成超时（10分钟）";
-        }
-        useProductionQueue.getState().updateVideoStatus(item.shotId, "video_timeout", "", "", emsg);
-        logger.error("Pipeline", "图生视频失败: " + (item.shotTitle || "") + " - " + emsg);
-    });
-
-    logger.info("Pipeline", "批量视频生成完成");
-  }, [projectItems, updateVideoStatus, isPaused]);
-
-  const regenerateSingleVideo = useCallback(async (shotId: string) => {
-    if (isPaused) return;
-    const item = projectItems.find((i) => i.shotId === shotId);
-    if (!item) return;
-    
-    resetVideoOnly(shotId);
-    await new Promise((r) => setTimeout(r, 100));
-    
-    const config = useConfigStore.getState();
-    const model = config.imageToVideoModel || "agnes-video-v2.0";
-    
-    if (!item.imageResultUrl) {
-      logger.error("Pipeline", "镜头 " + (item.shotTitle || "") + " 没有图片URL，无法重新生成视频");
-      return;
-    }
-    
-    const downloadResult = await downloadImageWithRetry(item.imageResultUrl, { shotId, maxRetries: 2 });
-    if (!downloadResult.success || !downloadResult.dataUrl) {
-      logger.error("Pipeline", "图片下载失败，无法重新生成视频");
-      return;
-    }
-    
-    const imageFile = dataUrlToFile(downloadResult.dataUrl, "shot-" + shotId + ".png", downloadResult.mimeType || "image/png");
-    if (!imageFile || imageFile.size === 0) return;
-    
-    const store = useTaskStore.getState();
-    const taskId = store.addTask({
-      taskId: "", type: "image-to-video", model,
-      prompt: item.shotTitle || "animate this scene",
-      status: "uploading", progress: 0,
-      resultUrl: "", thumbnail: item.imageResultUrl || "",
-      sourcePreview: item.imageResultUrl || undefined,
-      errorMessage: "", params: {},
-    });
-    
-    updateVideoStatus(item.shotId, "generating");
-    await storeTaskManager.execute(taskId, "image-to-video", function() {
-      return agnes.video.createFromImage({
-        image: imageFile,
-        prompt: item.shotTitle || "animate this scene",
-        model: model,
-      });
-    });
-    
-    let videoResultUrl = "";
-    const pollStartTime = Date.now();
-    while (Date.now() - pollStartTime < 600000) {
-      const current = useTaskStore.getState().getTaskById(taskId);
-      if (current) {
-        if (current.status === "completed" && current.resultUrl) {
-          videoResultUrl = current.resultUrl;
-          break;
-        }
-        if (current.status === "failed" || current.status === "timeout" || current.status === "cancelled") break;
-      }
-      await new Promise((r) => setTimeout(r, 3000));
-    }
-    
-    if (videoResultUrl) {
-      updateVideoStatus(item.shotId, "completed", taskId, videoResultUrl);
-      logger.info("Pipeline", "单镜头视频重新生成成功: " + (item.shotTitle || ""));
-    } else {
-      useProductionQueue.getState().updateVideoStatus(item.shotId, "video_timeout", "", "", "视频重新生成失败");
-      logger.error("Pipeline", "单镜头视频重新生成失败: " + (item.shotTitle || ""));
-    }
-  }, [projectItems, isPaused, resetVideoOnly, updateVideoStatus]);
-
-  const displayItems = useMemo(() => {
-    if (activeTab === "images") return projectItems;
-    if (activeTab === "videos") return projectItems.filter((i) => i.imageStatus === "completed");
-    return projectItems;
-  }, [projectItems, activeTab]);
-
-  // V2.4: 断点恢复 - 页面加载时恢复中断的任务
   useEffect(() => {
-    const pending = useProductionQueue.getState().recoverPendingTasks();
-    if (pending.length > 0) {
-      logger.info("Pipeline", `断点恢复: ${pending.length} 个待完成任务`);
+    const imgMap: Record<string, string> = {};
+    const vidMap: Record<string, string> = {};
+    for (const item of projectItems) {
+      if (item.imageResultUrl) imgMap[item.shotId] = item.imageResultUrl;
+      if (item.videoResultUrl) vidMap[item.shotId] = item.videoResultUrl;
     }
-  }, []);
-
-  // V2.4: 生成中暂停检查
-  const pauseCheck = useRef(false);
-
-  const statusIcon = (status: ProductionStatus) => {
-    switch (status) {
-      case "completed": return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />;
-      case "failed": return <XCircle className="h-3.5 w-3.5 text-red-500" />;
-      case "generating": return <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />;
-      case "pending": return <Clock className="h-3.5 w-3.5 text-muted-foreground" />;
-      // V2.4 Granular error states - no text-to-video fallback
-      case "image_fetch_failed":
-      case "image_expired":
-      case "image_not_found":
-        return <XCircle className="h-3.5 w-3.5 text-orange-500" />;
-      case "image_cors_blocked":
-        return <XCircle className="h-3.5 w-3.5 text-purple-500" />;
-      case "image_rate_limited":
-        return <Clock className="h-3.5 w-3.5 text-amber-500" />;
-      case "video_api_failed":
-        return <XCircle className="h-3.5 w-3.5 text-red-500" />;
-      case "video_timeout":
-        return <Clock className="h-3.5 w-3.5 text-red-400" />;
-      default: return <Clock className="h-3.5 w-3.5" />;
-    }
-  };
-
-  // 辅助函数：将 base64 dataURL 转为 File 对象
-  const dataUrlToFile = useCallback((dataUrl: string, fileName: string, mimeType: string): File | null => {
-    try {
-      const arr = dataUrl.split(",");
-      if (arr.length < 2) return null;
-      const mime = arr[0].match(/:(.*?);/)?.[1] || mimeType;
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      return new File([u8arr], fileName, { type: mime });
-    } catch (err) {
-      logger.error("dataUrlToFile", String(err));
-      return null;
-    }
-  }, []);
-
-  const countBy = (status: ProductionStatus, field: "imageStatus" | "videoStatus") =>
-    projectItems.filter((i) => i[field] === status).length;
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Film className="h-5 w-5" />
-            Production Queue
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{projectItems.length} shots</span>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setPaused(!isPaused)}>
-              {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-            </Button>
-          </div>
-        </div>
-        <CardDescription>{t("pipeline.productionQueueDesc")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-2 text-xs">
-          <div className="rounded bg-muted/30 p-2 text-center">
-            <div className="font-semibold text-green-500">{countBy("completed", "imageStatus")}</div>
-            <div className="text-muted-foreground">Images</div>
-          </div>
-          <div className="rounded bg-muted/30 p-2 text-center">
-            <div className="font-semibold text-green-500">{countBy("completed", "videoStatus")}</div>
-            <div className="text-muted-foreground">Videos</div>
-          </div>
-          <div className="rounded bg-muted/30 p-2 text-center">
-            <div className="font-semibold text-blue-500">{countBy("generating", "imageStatus") + countBy("generating", "videoStatus")}</div>
-            <div className="text-muted-foreground">Active</div>
-          </div>
-          <div className="rounded bg-muted/30 p-2 text-center">
-            <div className="font-semibold text-red-500">{countBy("failed", "imageStatus") + countBy("failed", "videoStatus")}</div>
-            <div className="text-muted-foreground">{t("pipeline.failed")}</div>
-          </div>
-        </div>
-
-        {/* Batch Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={generateImages} disabled={isPaused}>
-            <ImageIcon className="h-3.5 w-3.5" />
-            {t("pipeline.generateImages")}
-          </Button>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={generateVideos} disabled={isPaused}>
-            <Video className="h-3.5 w-3.5" />
-            {t("pipeline.generateVideos")}
-          </Button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 text-xs">
-          {(["all", "images", "videos"] as const).map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-md ${activeTab === tab ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/50"}`}
-            >{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
-          ))}
-        </div>
-
-                {/* Queue Items */}
-        <div className="space-y-1 max-h-[400px] overflow-y-auto">
-          {displayItems.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-8">{t("pipeline.noItems")}</p>
-          )}
-          {displayItems.map((item) => (
-            <div key={item.id} className="flex items-center gap-1.5 rounded border bg-white/[0.02] px-2.5 py-1.5 text-xs">
-              <span className="font-medium text-foreground w-12 shrink-0">#{item.order}</span>
-              <span className="truncate flex-1">{item.shotTitle}</span>
-              <div className="flex items-center gap-1 shrink-0">
-                {statusIcon(item.imageStatus)}
-                {statusIcon(item.videoStatus)}
-              </div>
-
-              {/* Image actions */}
-              {item.imageStatus === "completed" && (
-                <>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => window.open(item.imageResultUrl, "_blank")} title={t("pipeline.viewImage")}>
-                    <Eye className="h-3 w-3" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className={"h-6 w-6 p-0 " + (item.imageLocked ? "text-amber-500" : "")}
-                    onClick={() => item.imageLocked ? unlockImage(item.shotId) : lockImage(item.shotId)} title={item.imageLocked ? t("pipeline.unlockImage") : t("pipeline.lockImage")}>
-                    {item.imageLocked ? <Lock className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                  </Button>
-                </>
-              )}
-              {item.imageStatus !== "pending" && item.imageStatus !== "generating" && item.imageStatus !== "completed" && (
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400" onClick={() => regenImageOnly(item.shotId)} title={t("pipeline.regenImage")}>
-                  <RefreshCw className="h-3 w-3" />
-                </Button>
-              )}
-              {(item.imageStatus === "completed" || item.imageStatus === "image_deleted") && (
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400" onClick={() => { deleteImageAsset(item.shotId); StorageService.deleteAsset(item.shotId); }} title={t("pipeline.deleteImage")}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              )}
-
-              {/* Video actions */}
-              {item.videoStatus === "completed" && (
-                <>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => window.open(item.videoResultUrl, "_blank")} title={t("pipeline.viewVideo")}>
-                    <Eye className="h-3 w-3" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className={"h-6 w-6 p-0 " + (item.videoLocked ? "text-amber-500" : "")}
-                    onClick={() => item.videoLocked ? unlockVideo(item.shotId) : lockVideo(item.shotId)} title={item.videoLocked ? t("pipeline.unlockVideo") : t("pipeline.lockVideo")}>
-                    {item.videoLocked ? <Lock className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                  </Button>
-                </>
-              )}
-              {item.videoStatus !== "pending" && item.videoStatus !== "generating" && item.videoStatus !== "completed" && (
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => regenVideoOnly(item.shotId)} title={t("pipeline.regenVideo")}>
-                  <RefreshCw className="h-3 w-3" />
-                </Button>
-              )}
-              {(item.videoStatus === "completed" || item.videoStatus === "video_deleted") && (
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400" onClick={() => { deleteVideoAsset(item.shotId); StorageService.deleteAsset(item.shotId); }} title={t("pipeline.deleteVideo")}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              )}
-
-              {item.imageError && <span className="text-red-500 text-[9px] truncate max-w-[80px]" title={item.imageError}>{item.imageError}</span>}
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ============================================================
-// Sub-component: {t("pipeline.timelineImport")} (Phase 7)
-// ============================================================
-function TimelineImportPanel({ project }: { project: any }) {
-  const { t } = useTranslation();
-  const { createTimeline, addClip } = useEditorStore();
-  const { items } = useProductionQueue();
-  const projectItems = items.filter((i) => i.projectId === project.id && i.videoStatus === "completed");
-  const [imported, setImported] = useState(false);
-
-  const handleImport = () => {
-    const timelineId = createTimeline({
-      name: `Pipeline - ${project.name}`,
-      projectId: project.id,
-      fps: 24, width: 1152, height: 768,
-      duration: projectItems.length * 3,
+    setImageUrls((prev) => {
+      const prevKeys = JSON.stringify(prev);
+      const newKeys = JSON.stringify(imgMap);
+      return prevKeys === newKeys ? prev : imgMap;
     });
-    let currentTime = 0;
-    for (const item of projectItems.sort((a, b) => a.order - b.order)) {
-      addClip(timelineId, {
-        timelineId,
-        source: { type: "shot", id: item.shotId },
-        type: "video",
-        title: item.shotTitle,
-        startTime: currentTime,
-        endTime: currentTime + 3,
-        duration: 3,
-        src: item.videoResultUrl || undefined,
-        properties: {},
-      });
-      currentTime += 3;
+    setVideoUrls((prev) => {
+      const prevKeys = JSON.stringify(prev);
+      const newKeys = JSON.stringify(vidMap);
+      return prevKeys === newKeys ? prev : vidMap;
+    });
+  }, [projectItems]);
+
+  const getShotTitle = useCallback((shotId: string): string => {
+    for (const scene of projectScenes) {
+      const shot = scene.shots.find((s: Shot) => s.id === shotId);
+      if (shot) return shot.renderedPrompt || shot.prompt || shot.description || shot.title || "";
     }
-    setImported(true);
-  };
+    return "";
+  }, [projectScenes]);
+
+  const getPromptPackForShot = useCallback((shotId: string): PromptPack | null => {
+    for (const scene of projectScenes) {
+      const shot = scene.shots.find((candidate: Shot) => candidate.id === shotId);
+      if (shot) return generatePromptPack(shot, scene, lockedCharacters, project.styleDna || "");
+    }
+    return null;
+  }, [projectScenes, lockedCharacters, project.styleDna]);
+
+  useEffect(() => {
+    for (const item of projectItems) {
+      const pack = getPromptPackForShot(item.shotId);
+      if (!pack) continue;
+      const nextImagePrompt = isLikelyShortPrompt(item.imagePrompt, item.shotTitle) ? pack.imagePrompt : item.imagePrompt;
+      const nextVideoPrompt = isLikelyShortPrompt(item.videoPrompt, item.shotTitle) ? pack.videoPrompt : item.videoPrompt;
+      const nextCustomPrompt = isLikelyShortPrompt(item.customPrompt, item.shotTitle) ? undefined : item.customPrompt;
+      const nextNegativePrompt = item.negativePrompt || pack.negativePrompt;
+      if (nextImagePrompt !== item.imagePrompt || nextVideoPrompt !== item.videoPrompt || nextCustomPrompt !== item.customPrompt || nextNegativePrompt !== item.negativePrompt) {
+        queue.updateItem(item.shotId, {
+          imagePrompt: nextImagePrompt,
+          videoPrompt: nextVideoPrompt,
+          customPrompt: nextCustomPrompt,
+          negativePrompt: nextNegativePrompt,
+        });
+      }
+    }
+  }, [projectItems, getPromptPackForShot, queue]);
+
+  const getImagePrompt = useCallback((item: any): string => item.customPrompt || item.imagePrompt || getShotTitle(item.shotId) || item.shotTitle || "", [getShotTitle]);
+  const getVideoPrompt = useCallback((item: any): string => item.customPrompt || item.videoPrompt || item.imagePrompt || getShotTitle(item.shotId) || item.shotTitle || "", [getShotTitle]);
+
+  const getImageUrl = useCallback((shotId: string): string | undefined => imageUrls[shotId], [imageUrls]);
+  const getVideoUrl = useCallback((shotId: string): string | undefined => videoUrls[shotId], [videoUrls]);
+
+  const handleGenerateImage = useCallback(async (shotId: string) => {
+    if (processingImages.has(shotId)) return;
+    setProcessingImages((prev) => new Set(prev).add(shotId));
+    try {
+      const item = projectItems.find((i) => i.shotId === shotId);
+      if (!item || item.imageLocked) return;
+      const prompt = getImagePrompt(item);
+      if (!prompt.trim()) {
+        queue.updateImageStatus(shotId, "failed", undefined, undefined, t("pipeline.promptRequired"));
+        return;
+      }
+      queue.updateImageStatus(shotId, "generating");
+      const images = await agnes.image.generate({
+        prompt: prompt.trim(),
+        size: "1024x1024",
+        n: 1,
+        model: config.textToImageModel || config.model || "agnes-image-2.1-flash",
+      });
+      const imageUrl = images[0]?.url;
+      if (!imageUrl) throw new Error(t("pipeline.noImageResult"));
+      queue.updateImageStatus(shotId, "completed", undefined, imageUrl);
+      markDirty();
+      setImageUrls((prev) => ({ ...prev, [shotId]: imageUrl }));
+      try { await StorageService.saveAssetFromUrl({ url: imageUrl, type: "image", projectId: project.id, shotId }); } catch { /* non-critical */ }
+    } catch (err) {
+      const classified = ErrorClassifier.classify(err);
+      queue.updateImageStatus(shotId, "failed", undefined, undefined, `${classified.type}: ${classified.userMessage}`);
+    } finally {
+      setProcessingImages((prev) => { const n = new Set(prev); n.delete(shotId); return n; });
+    }
+  }, [processingImages, projectItems, queue, project.id, getImagePrompt, config.textToImageModel, config.model, t]);
+
+  const handleGenerateVideo = useCallback(async (shotId: string) => {
+    if (processingVideos.has(shotId)) return;
+    setProcessingVideos((prev) => new Set(prev).add(shotId));
+    const abortController = new AbortController();
+    videoAbortControllers.current.set(shotId, abortController);
+    let localTaskId = "";
+    try {
+      const item = projectItems.find((i) => i.shotId === shotId);
+      if (!item || item.videoLocked) return;
+      if (!item.imageResultUrl) {
+        queue.updateVideoStatus(shotId, "failed", undefined, undefined, t("pipeline.videoRequiresImage"));
+        return;
+      }
+      queue.updateVideoStatus(shotId, "generating");
+      const prompt = getVideoPrompt(item);
+      localTaskId = useTaskStore.getState().addTask({
+        id: `pipeline-video-${shotId}-${Date.now()}`,
+        taskId: "",
+        type: "image-to-video",
+        model: config.imageToVideoModel || "agnes-video-v2.0",
+        prompt,
+        status: "uploading",
+        progress: 0,
+        resultUrl: "",
+        thumbnail: item.imageResultUrl,
+        errorMessage: "",
+        params: { projectId: project.id, shotId },
+      });
+      const imageFetch = await downloadImageWithRetry(item.imageResultUrl, { shotId, maxRetries: 2 });
+      if (abortController.signal.aborted) {
+        queue.updateVideoStatus(shotId, "cancelled", undefined, undefined, t("pipeline.taskCancelled"));
+        useTaskStore.getState().updateTask(localTaskId, { status: "cancelled", errorMessage: t("pipeline.taskCancelled") });
+        return;
+      }
+      if (!imageFetch.success || !imageFetch.dataUrl) {
+        const status = mapErrorToProductionStatus(imageFetch.errorType);
+        queue.updateVideoStatus(shotId, status, undefined, undefined, imageFetch.errorMessage);
+        useTaskStore.getState().updateTask(localTaskId, { status: "failed", errorMessage: imageFetch.errorMessage });
+        return;
+      }
+      useTaskStore.getState().updateTask(localTaskId, { status: "submitted" });
+      const imgResp = await fetch(imageFetch.dataUrl);
+      const imgBlob = await imgResp.blob();
+      const videoTask = await agnes.video.createFromImage({
+        image: imgBlob,
+        prompt,
+        model: config.imageToVideoModel || "agnes-video-v2.0",
+      });
+      if (videoTask?.taskId) {
+        const pollId = videoTask.videoId || videoTask.taskId;
+        queue.updateVideoStatus(shotId, "generating", pollId);
+        useTaskStore.getState().updateTask(localTaskId, { taskId: pollId, status: "processing", params: { projectId: project.id, shotId, taskId: videoTask.taskId, videoId: videoTask.videoId } });
+        const videoResult = await agnes.video.poll(pollId, {
+          signal: abortController.signal,
+          onProgress: (progress) => {
+            queue.updateVideoStatus(shotId, "generating", pollId);
+            useTaskStore.getState().updateTask(localTaskId, { status: "processing", progress: progress.progress });
+          },
+        });
+        queue.updateVideoStatus(shotId, "completed", pollId, videoResult.url);
+        useTaskStore.getState().updateTask(localTaskId, { status: "completed", progress: 100, resultUrl: videoResult.url });
+        markDirty();
+        setVideoUrls((prev) => ({ ...prev, [shotId]: videoResult.url }));
+        try { await StorageService.saveAssetFromUrl({ url: videoResult.url, type: "video", projectId: project.id, shotId }); } catch { /* non-critical */ }
+      } else {
+        queue.updateVideoStatus(shotId, "failed", undefined, undefined, t("pipeline.noVideoTaskCreated"));
+        useTaskStore.getState().updateTask(localTaskId, { status: "failed", errorMessage: t("pipeline.noVideoTaskCreated") });
+      }
+    } catch (err) {
+      if (abortController.signal.aborted) {
+        queue.updateVideoStatus(shotId, "cancelled", undefined, undefined, t("pipeline.taskCancelled"));
+        if (localTaskId) useTaskStore.getState().updateTask(localTaskId, { status: "cancelled", errorMessage: t("pipeline.taskCancelled") });
+        return;
+      }
+      const classified = ErrorClassifier.classify(err);
+      queue.updateVideoStatus(shotId, "failed", undefined, undefined, `${classified.type}: ${classified.userMessage}`);
+      if (localTaskId) useTaskStore.getState().updateTask(localTaskId, { status: "failed", errorMessage: `${classified.type}: ${classified.userMessage}` });
+    } finally {
+      videoAbortControllers.current.delete(shotId);
+      setProcessingVideos((prev) => { const n = new Set(prev); n.delete(shotId); return n; });
+    }
+  }, [processingVideos, projectItems, queue, config.imageToVideoModel, project.id, getVideoPrompt, t]);
+
+  const handleSavePrompt = useCallback((shotId: string, prompt: string) => {
+    queue.updatePrompt(shotId, prompt);
+    usePromptHistoryStore.getState().saveVersion(shotId, prompt);
+    markDirty();
+  }, [queue]);
+
+  const handleBatchGenerateImages = useCallback(() => { for (const sid of selectedIds) handleGenerateImage(sid); queue.deselectAllShots(); }, [selectedIds, handleGenerateImage, queue]);
+  const handleBatchGenerateVideos = useCallback(() => {
+    const runnableIds = selectedIds.filter((sid) => {
+      const item = projectItems.find((i) => i.shotId === sid);
+      if (!item || item.videoLocked) return false;
+      if (!item.imageResultUrl) {
+        queue.updateVideoStatus(sid, "failed", undefined, undefined, t("pipeline.videoRequiresImage"));
+        return false;
+      }
+      return true;
+    });
+    for (const sid of runnableIds) handleGenerateVideo(sid);
+    queue.deselectAllShots();
+  }, [selectedIds, projectItems, handleGenerateVideo, queue, t]);
+  const handleBatchPause = useCallback(() => {
+    for (const shotId of selectedIds) {
+      videoAbortControllers.current.get(shotId)?.abort();
+      const activeTasks = useTaskStore.getState().tasks.filter((task) => task.params?.shotId === shotId && !["completed", "failed", "timeout", "cancelled"].includes(task.status));
+      for (const task of activeTasks) useTaskStore.getState().updateTask(task.id, { status: "cancelled", errorMessage: t("pipeline.taskCancelled") });
+      const item = projectItems.find((candidate) => candidate.shotId === shotId);
+      if (item?.imageStatus === "generating" || item?.imageStatus === "regenerating_image") {
+        queue.updateImageStatus(shotId, "cancelled", undefined, undefined, t("pipeline.taskCancelled"));
+      }
+      if (item?.videoStatus === "generating" || item?.videoStatus === "regenerating_video") {
+        queue.updateVideoStatus(shotId, "cancelled", undefined, undefined, t("pipeline.taskCancelled"));
+      }
+    }
+    queue.batchPause(selectedIds);
+    queue.deselectAllShots();
+  }, [selectedIds, projectItems, queue, t]);
+  const handleBatchResume = useCallback(() => { queue.batchResume(selectedIds); queue.deselectAllShots(); }, [selectedIds, queue]);
+  const handleBatchDelete = useCallback(() => { queue.batchDelete(selectedIds); queue.deselectAllShots(); }, [selectedIds, queue]);
+  const handleBatchLock = useCallback(() => { queue.batchLock(selectedIds); queue.deselectAllShots(); }, [selectedIds, queue]);
+
+  const handleBatchImportTimeline = useCallback(() => {
+    const timelineId = editorStore.activeTimelineId;
+    if (!timelineId) return;
+    for (const sid of selectedIds) {
+      const item = projectItems.find((i) => i.shotId === sid);
+      if (item?.videoResultUrl) {
+        editorStore.addClip(timelineId, {
+          timelineId, source: { type: "shot", id: sid }, type: "video",
+          title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
+          src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
+        });
+      }
+    }
+    queue.deselectAllShots();
+  }, [selectedIds, projectItems, editorStore, queue]);
+
+  const handleImportAll = useCallback(() => {
+    const timelineId = editorStore.activeTimelineId;
+    if (!timelineId) return;
+    for (const item of projectItems) {
+      if (item.videoResultUrl) {
+        editorStore.addClip(timelineId, {
+          timelineId, source: { type: "shot", id: item.shotId }, type: "video",
+          title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
+          src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
+        });
+      }
+    }
+  }, [projectItems, editorStore]);
+
+  const handleImportLocked = useCallback(() => {
+    const timelineId = editorStore.activeTimelineId;
+    if (!timelineId) return;
+    for (const item of projectItems) {
+      if (item.videoResultUrl && item.videoLocked) {
+        editorStore.addClip(timelineId, {
+          timelineId, source: { type: "shot", id: item.shotId }, type: "video",
+          title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
+          src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
+        });
+      }
+    }
+  }, [projectItems, editorStore]);
+
+  const handleImportScene = useCallback((sceneId: string) => {
+    const timelineId = editorStore.activeTimelineId;
+    if (!timelineId) return;
+    for (const item of projectItems) {
+      if (item.sceneId === sceneId && item.videoResultUrl) {
+        editorStore.addClip(timelineId, {
+          timelineId, source: { type: "shot", id: item.shotId }, type: "video",
+          title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
+          src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
+        });
+      }
+    }
+  }, [projectItems, editorStore]);
+
+  const handleImportShot = useCallback((shotId: string) => {
+    const timelineId = editorStore.activeTimelineId;
+    if (!timelineId) return;
+    const item = projectItems.find((i) => i.shotId === shotId);
+    if (item?.videoResultUrl) {
+      editorStore.addClip(timelineId, {
+        timelineId, source: { type: "shot", id: item.shotId }, type: "video",
+        title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
+        src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
+      });
+    }
+  }, [projectItems, editorStore]);
+
+  const videoCount = projectItems.filter((i) => i.videoResultUrl).length;
+  const lockedCount = projectItems.filter((i) => i.videoLocked).length;
+  const sceneIds = [...new Set(projectItems.map((i) => i.sceneId))];
+  const shotIds = projectItems.filter((i) => i.videoResultUrl).map((i) => i.shotId);
+
+  if (projectItems.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <LayoutDashboard className="h-5 w-5" />
+            {t("pipeline.productionQueue")}
+          </CardTitle>
+          <CardDescription>{t("pipeline.productionQueueDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-8">{t("pipeline.noItems")}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Film className="h-5 w-5" />
-          Timeline Auto-Import
-        </CardTitle>
-        <CardDescription>{t("pipeline.timelineImportDesc")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            {projectItems.length} {t("pipeline.videosReady")}
-          </span>
-          <Button onClick={handleImport} disabled={projectItems.length === 0 || imported} className="gap-2">
-            <ArrowRight className="h-4 w-4" />
-            {imported ? "Imported ✓" : t("pipeline.importToTimeline")}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <LayoutDashboard className="h-4 w-4" />
+            {t("pipeline.productionQueue")}
+            <Badge variant="secondary" className="ml-auto text-xs">{projectItems.length} {t("pipeline.shots")}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => queue.selectAllShots(projectItems.map(i => i.shotId))}>
+              {t("pipeline.selectAll")}
+            </Button>
+            <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={() => queue.deselectAllShots()}>
+              {t("pipeline.deselectAll")}
+            </Button>
+            {selectedIds.length > 0 && (
+              <span className="text-xs text-muted-foreground">{t("pipeline.selected")} {selectedIds.length} {t("pipeline.items")}</span>
+            )}
+          </div>
+          <BatchOperations
+            selectedCount={selectedIds.length}
+            onBatchGenerateImages={handleBatchGenerateImages}
+            onBatchGenerateVideos={handleBatchGenerateVideos}
+            onBatchPause={handleBatchPause}
+            onBatchResume={handleBatchResume}
+            onBatchDelete={handleBatchDelete}
+            onBatchLock={handleBatchLock}
+            onBatchImportTimeline={handleBatchImportTimeline}
+          />
+          <Separator />
+          <QueueCardView
+            items={projectItems}
+            selectedIds={selectedIds}
+            onToggleSelect={(sid) => queue.toggleSelectShot(sid)}
+            onGenerateImage={handleGenerateImage}
+            onGenerateVideo={handleGenerateVideo}
+            onRegenImage={(sid) => { queue.regenImageOnly(sid); handleGenerateImage(sid); }}
+            onRegenVideo={(sid) => { queue.regenVideoOnly(sid); handleGenerateVideo(sid); }}
+            onLockImage={(sid) => queue.lockImage(sid)}
+            onUnlockImage={(sid) => queue.unlockImage(sid)}
+            onLockVideo={(sid) => queue.lockVideo(sid)}
+            onUnlockVideo={(sid) => queue.unlockVideo(sid)}
+            onDeleteImage={(sid) => queue.deleteImageAsset(sid)}
+            onDeleteVideo={(sid) => queue.deleteVideoAsset(sid)}
+            onSavePrompt={handleSavePrompt}
+            getImageUrl={getImageUrl}
+            getVideoUrl={getVideoUrl}
+          />
+        </CardContent>
+      </Card>
+      <TimelineImport
+        videoCount={videoCount}
+        lockedCount={lockedCount}
+        selectedCount={selectedIds.length}
+        onImportAll={handleImportAll}
+        onImportSelected={handleBatchImportTimeline}
+        onImportLocked={handleImportLocked}
+        onImportScene={handleImportScene}
+        onImportShot={handleImportShot}
+        sceneIds={sceneIds}
+        shotIds={shotIds}
+      />
+    </div>
   );
 }
 
-// ============================================================
-// Sub-component: Project Export (Phase 8)
-// ============================================================
-function ProjectExportPanel({ project, characters, generatedScenes }: { project: any; characters: Character[]; generatedScenes: Scene[] }) {
+function ProjectExportPanel({ project, characters, generatedScenes }: { project: any; characters: Character[]; generatedScenes: any[] }) {
   const { t } = useTranslation();
-  const { items } = useProductionQueue();
-  const projectItems = items.filter((i) => i.projectId === project.id);
+  const queue = useProductionQueue();
+  const projectItems = queue.getProjectItems(project.id);
 
-  const buildExport = useCallback((format: "json" | "md"): string => {
-    const exportData: ProjectExport = {
+  const buildExport = (format: "json" | "md"): string => {
+    const data: ProjectExport = {
       version: "2.4",
       exportedAt: Date.now(),
-      project: {
-        name: project.name,
-        description: project.description,
-        tags: project.tags || [],
-        styleDna: project.styleDna || "",
-      },
-      characters: (project.lockedCharacterIds || []).map((cid: string) => {
-        const c = characters.find((ch) => ch.id === cid);
-        return {
-          name: c?.name || "Unknown",
-          profile: c?.profile || { age: "", gender: "", appearance: "", hair: "", clothing: "", personality: "", background: "" },
-          dnaBlock: c?.dnaBlock || "",
-          references: c?.references || [],
-        };
-      }),
-      storyScenes: generatedScenes.map((scene) => ({
-        title: scene.title,
-        description: scene.description,
-        cameraAngle: scene.cameraAngle,
-        shots: scene.shots.map((shot) => {
-          const qItem = projectItems.find((i) => i.shotId === shot.id);
-          return {
-            title: shot.title,
-            description: shot.description,
-            prompt: shot.prompt,
-            negativePrompt: shot.negativePrompt,
-            imageUrl: qItem?.imageResultUrl,
-            videoUrl: qItem?.videoResultUrl,
-          };
+      project: { name: project.name, description: project.description, tags: project.tags || [], styleDna: project.styleDna || "" },
+      characters: (project.lockedCharacterIds || []).map((id: string) => {
+        const c = characters.find((ch: Character) => ch.id === id);
+        return c ? { name: c.name, profile: c.profile, dnaBlock: c.dnaBlock, references: c.references || [] } : null;
+      }).filter(Boolean),
+      storyScenes: (project.scenes || generatedScenes || []).map((scene: any) => ({
+        title: scene.title, description: scene.description, cameraAngle: scene.cameraAngle,
+        shots: (scene.shots || []).map((shot: any) => {
+          const qi = projectItems.find((i: any) => i.shotId === shot.id);
+          return { title: shot.title, description: shot.description, prompt: shot.prompt || "", negativePrompt: shot.negativePrompt || "", imageUrl: qi?.imageResultUrl || "", videoUrl: qi?.videoResultUrl || "" };
         }),
       })),
     };
-
-    if (format === "md") {
-      let md = `# ${project.name}\n\n`;
-      md += `> ${project.description}\n\n`;
-      if (exportData.project.styleDna) md += `**Style DNA:** ${exportData.project.styleDna}\n\n`;
-      md += `---\n\n`;
-      for (const ch of exportData.characters) {
-        md += `## 🧑 ${ch.name}\n`;
-        md += `- DNA: ${ch.dnaBlock}\n`;
-        if (ch.profile.age) md += `- Age: ${ch.profile.age}\n`;
-        md += `\n`;
-      }
-      for (const sc of exportData.storyScenes) {
-        md += `## 🎬 ${sc.title}\n`;
-        md += `${sc.description}\n\n`;
-        for (const sh of sc.shots) {
-          md += `### 🎥 ${sh.title}\n`;
-          md += `Prompt: ${sh.prompt}\n`;
-          md += sh.videoUrl ? `[Video](${sh.videoUrl})\n` : "";
-          md += `\n`;
-        }
-      }
-      return md;
+    if (format === "json") return JSON.stringify(data, null, 2);
+    let md = `# Pipeline Export: ${project.name}\n\n**Exported:** ${new Date(data.exportedAt).toISOString()}\n\n## Characters\n\n`;
+    for (const c of data.characters) md += `- **${c.name}**\n  - DNA: ${c.dnaBlock.slice(0, 100)}...\n`;
+    md += `\n## Scenes\n\n`;
+    for (const s of data.storyScenes) {
+      md += `### ${s.title}\n${s.description}\n\n`;
+      for (const shot of s.shots) md += `- **${shot.title}**\n  - Prompt: ${shot.prompt}\n${shot.imageUrl ? `  - Image: ${shot.imageUrl}\n` : ""}${shot.videoUrl ? `  - Video: ${shot.videoUrl}\n` : ""}`;
+      md += `\n`;
     }
-    return JSON.stringify(exportData, null, 2);
-  }, [project, characters, generatedScenes, projectItems]);
+    return md;
+  };
 
   const handleExport = (format: "json" | "md") => {
     const content = buildExport(format);
@@ -907,34 +748,66 @@ function ProjectExportPanel({ project, characters, generatedScenes }: { project:
   );
 }
 
-// ============================================================
-// Main Pipeline Page
-// ============================================================
+function LastSavedIndicator() {
+  const { t } = useTranslation();
+  const [savedAt, setSavedAt] = useState(getLastSavedAt());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSavedAt(getLastSavedAt());
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!savedAt) return null;
+  return (
+    <span className="text-[10px] text-muted-foreground ml-2">
+      {t("common.lastSaved") || "最后保存"}: {new Date(savedAt).toLocaleTimeString()}
+    </span>
+  );
+}
+
 export default function PipelinePage() {
+  useEffect(() => {
+    startAutoSave();
+    return () => { stopAutoSave(); };
+  }, []);
   const { t } = useTranslation();
   const { projects } = useProjectStore();
   const { characters } = useCharacterStore();
+  const queue = useProductionQueue();
   const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [showDna, setShowDna] = useState(true);
-  const [showStoryboard, setShowStoryboard] = useState(true);
-  const [showQueue, setShowQueue] = useState(true);
+  const leftRef = useRef<HTMLDivElement>(null);
+  const rightRef = useRef<HTMLDivElement>(null);
 
   const project = projects.find((p) => p.id === selectedProjectId);
+  const stats = selectedProjectId ? queue.getBatchStats(selectedProjectId) : null;
+  const selectedProjectItems = selectedProjectId ? queue.getProjectItems(selectedProjectId) : [];
+  const storageImageUrls = selectedProjectItems.map((item) => item.imageResultUrl).filter(Boolean) as string[];
+  const storageVideoUrls = selectedProjectItems.map((item) => item.videoResultUrl).filter(Boolean) as string[];
+
+  const handleLeftScroll = useCallback(() => {
+    if (leftRef.current && rightRef.current) rightRef.current.scrollTop = leftRef.current.scrollTop;
+  }, []);
+  const handleRightScroll = useCallback(() => {
+    if (rightRef.current && leftRef.current) leftRef.current.scrollTop = rightRef.current.scrollTop;
+  }, []);
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-4xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-            <Wand2 className="h-6 w-6 text-primary" />
-            AI Production Pipeline
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t("pipeline.subtitle")}
-          </p>
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+              <LayoutDashboard className="h-6 w-6 text-primary" />
+              {t("pipeline.dashboard")}
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">{t("pipeline.dashboardDesc")}</p>
+          <LastSavedIndicator />
+          </div>
+          <ProductionModeToggle mode={queue.productionMode} onChange={(mode) => queue.setProductionMode(mode)} />
         </div>
 
-        {/* Project Selector */}
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
@@ -944,9 +817,7 @@ export default function PipelinePage() {
                   <SelectValue placeholder={t("pipeline.selectProject")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
+                  {projects.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -955,41 +826,29 @@ export default function PipelinePage() {
 
         {!project && (
           <div className="text-center py-16 text-muted-foreground">
-            <Wand2 className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <LayoutDashboard className="h-12 w-12 mx-auto mb-4 opacity-30" />
             <p>{t("pipeline.selectProjectHint")}</p>
             <p className="text-sm mt-1">{t("pipeline.noProject")}</p>
           </div>
         )}
 
         {project && (
-          <>
-            {/* Collapsible sections */}
-            <div className="flex gap-2">
-              {[
-                { key: "dna", label: t("pipeline.characterDna"), state: showDna, set: setShowDna },
-                { key: "storyboard", label: t("pipeline.storyToStoryboard"), state: showStoryboard, set: setShowStoryboard },
-                { key: "queue", label: t("pipeline.productionQueue"), state: showQueue, set: setShowQueue },
-              ].map((s) => (
-                <button key={s.key} onClick={() => s.set(!s.state)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                    s.state ? "bg-primary/10 border-primary text-primary" : "bg-muted border-border text-muted-foreground"
-                  }`}
-                >{s.state ? "✓ " : ""}{s.label}</button>
-              ))}
+          <div className="flex flex-col gap-4 lg:flex-row">
+            <div ref={leftRef} onScroll={handleLeftScroll} className="min-w-0 flex-1 space-y-4 lg:max-h-[calc(100vh-280px)] lg:overflow-y-auto lg:pr-1">
+              <CharacterDnaPanel project={project} characters={characters} />
+              <StoryboardGenerator project={project} characters={characters} />
             </div>
-
-            {showDna && <CharacterDnaPanel project={project} characters={characters} />}
-            {showStoryboard && <StoryboardGenerator project={project} characters={characters} />}
-            {showQueue && <ProductionQueuePanel project={project} />}
-            <TimelineImportPanel project={project} />
-            <ProjectExportPanel project={project} characters={characters} generatedScenes={[]} />
-          </>
+            <div ref={rightRef} onScroll={handleRightScroll} className="min-w-0 space-y-4 lg:max-h-[calc(100vh-280px)] lg:w-[480px] lg:shrink-0 lg:overflow-y-auto lg:pl-1">
+              {stats && <StatisticsPanel stats={stats} />}
+              <CurrentTasksWidget />
+              <ProductionQueuePanel project={project} characters={characters} />
+              <StorageMonitor projectId={project.id} imageUrls={storageImageUrls} videoUrls={storageVideoUrls} />
+              <ProjectExportPanel project={project} characters={characters} generatedScenes={[]} />
+            </div>
+          </div>
         )}
       </div>
     </AppShell>
   );
 }
-
-
-
 

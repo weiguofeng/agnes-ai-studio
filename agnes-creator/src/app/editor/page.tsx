@@ -13,7 +13,47 @@ import { cn } from "@/lib/utils";
 import { StorageService } from "@/services/StorageService";
 import { Upload, FileUp } from "lucide-react";
 
-function TimelineClip({ clip, totalDuration, isSelected, onClick, onDelete }: any) {
+function TimelineClip({ clip, totalDuration, isSelected, onClick, onDelete, onDragStart, onDragOver, onDrop, index }: any) {
+  const pct = totalDuration > 0 ? (clip.duration / totalDuration) * 100 : 10;
+  return (
+    <div
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData("text/clip-index", String(index)); onDragStart?.(); }}
+      onDragOver={(e) => { e.preventDefault(); onDragOver?.(); }}
+      onDrop={(e) => { e.preventDefault(); onDrop?.(index); }}
+      className={cn(
+        "relative shrink-0 h-full rounded-md border cursor-grab active:cursor-grabbing group transition-all",
+        isSelected ? "border-purple-400 bg-purple-500/20" : "border-white/10 bg-white/[0.06] hover:bg-white/[0.1]"
+      )}
+      style={{ width: Math.max(pct, 8) + "%", minWidth: "60px" }}
+      onClick={onClick}
+    >
+      <div className="h-full flex flex-col items-center justify-center p-1">
+        {clip.src ? (
+          clip.type === "video" ? (
+            <video src={clip.src} className="h-8 w-12 object-cover rounded" preload="metadata" />
+          ) : (
+            <img src={clip.src} alt="" className="h-8 w-12 object-cover rounded" />
+          )
+        ) : (
+          <div className="h-8 w-12 rounded bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+            <Film className="h-4 w-4 text-purple-400" />
+          </div>
+        )}
+        <p className="text-[9px] text-muted-foreground truncate w-full text-center mt-1">{clip.title}</p>
+        <span className="text-[8px] text-muted-foreground">{clip.duration.toFixed(1)}s</span>
+      </div>
+      <button
+        className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100"
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+      >
+        <Trash2 className="h-2.5 w-2.5" />
+      </button>
+    </div>
+  );
+}
+
+function TimelineClip_old({ clip, totalDuration, isSelected, onClick, onDelete }: any) {
   const pct = totalDuration > 0 ? (clip.duration / totalDuration) * 100 : 10;
   return (
     <div
@@ -52,12 +92,14 @@ function TimelineClip({ clip, totalDuration, isSelected, onClick, onDelete }: an
 export default function EditorPage() {
   const { t } = useTranslation();
   const store = useEditorStore();
-  const { timelines, activeTimelineId, setActiveTimeline, createTimeline, addClip, removeClip, getActiveTimeline } = store;
+  const { timelines, activeTimelineId, setActiveTimeline, createTimeline, addClip, removeClip, getActiveTimeline, reorderClips } = store;
   const scenes = useStoryboardStore().scenes;
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [dragClipIndex, setDragClipIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const animRef = useRef(0);
@@ -66,6 +108,17 @@ export default function EditorPage() {
   const isPlayingRef = useRef(false);
   const playingLockedSrcRef = useRef<string | null>(null);
   const playingClipRef = useRef<{ clip: any; clipStart: number; clipOffset: number } | null>(null);
+  // V2.6: Video cache to avoid re-decoding
+  const videoCacheRef = useRef<Map<string, string>>(new Map());
+  const getCachedUrl = useCallback((src: string) => {
+    if (videoCacheRef.current.has(src)) return videoCacheRef.current.get(src)!;
+    return src;
+  }, []);
+  const cacheVideoUrl = useCallback((src: string) => {
+    if (!videoCacheRef.current.has(src)) {
+      videoCacheRef.current.set(src, src);
+    }
+  }, []);
 
   const activeTimeline = getActiveTimeline();
   const totalDuration = activeTimeline?.clips.reduce((s, c) => s + c.duration, 0) || 0;
@@ -192,7 +245,8 @@ export default function EditorPage() {
   // ---- Video event: error ----
   const handleVideoError = useCallback(() => {
     const ve = videoRef.current?.error;
-    console.error("[Editor] Video error:", {
+    if (!ve && !videoRef.current?.src) return;
+    console.warn("[Editor] Video error:", {
       code: ve?.code,
       message: ve?.message,
       src: videoRef.current?.currentSrc || videoRef.current?.src,
@@ -277,6 +331,30 @@ export default function EditorPage() {
       acc += clip.duration;
     }
   };
+
+  // ---- Timeline drag & drop ----
+  const handleTimelineDragStart = useCallback((index: number) => {
+    setDragClipIndex(index);
+  }, []);
+
+  const handleTimelineDragOver = useCallback((index: number) => {
+    setDropTargetIndex(index);
+  }, []);
+
+  const handleTimelineDrop = useCallback((targetIndex: number) => {
+    if (dragClipIndex === null || !activeTimeline) return;
+    if (dragClipIndex === targetIndex) {
+      setDragClipIndex(null);
+      setDropTargetIndex(null);
+      return;
+    }
+    const clips = [...activeTimeline.clips];
+    const [moved] = clips.splice(dragClipIndex, 1);
+    clips.splice(targetIndex, 0, moved);
+    reorderClips(activeTimeline.id, clips.map(c => c.id));
+    setDragClipIndex(null);
+    setDropTargetIndex(null);
+  }, [dragClipIndex, activeTimeline, reorderClips]);
 
   // ---- Import scene ----
   const handleImportScene = (sceneId: string) => {
@@ -476,7 +554,7 @@ export default function EditorPage() {
                 </div>
               ) : (
                 <div className="h-full flex gap-1 overflow-x-auto pb-2">
-                  {activeTimeline.clips.map((clip: any) => (
+                  {activeTimeline.clips.map((clip: any, idx: number) => (
                     <TimelineClip
                       key={clip.id}
                       clip={clip}

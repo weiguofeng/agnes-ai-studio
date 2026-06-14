@@ -25,6 +25,16 @@ export interface PollOptions {
 
 export function createVideoService(client: AgnesClient) {
 
+  function extractVideoTaskIds(response: unknown): { taskId: string; videoId: string } {
+    if (!response || typeof response !== "object") return { taskId: "", videoId: "" };
+    const obj = response as Record<string, unknown>;
+    const data = obj.data && typeof obj.data === "object" ? obj.data as Record<string, unknown> : undefined;
+    const nestedData = data?.data && typeof data.data === "object" ? data.data as Record<string, unknown> : undefined;
+    const taskId = String(obj.task_id ?? obj.taskId ?? data?.task_id ?? data?.taskId ?? nestedData?.task_id ?? nestedData?.taskId ?? obj.id ?? data?.id ?? nestedData?.id ?? "");
+    const videoId = String(obj.video_id ?? obj.videoId ?? data?.video_id ?? data?.videoId ?? nestedData?.video_id ?? nestedData?.videoId ?? "");
+    return { taskId, videoId };
+  }
+
   function fileToDataUri(file: File | Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -66,7 +76,7 @@ export function createVideoService(client: AgnesClient) {
 
   // -----------------------------------------------------------
   // 用 fetch 直接调用 /agnesapi 端点（不在 /v1 下）
-  // 注意：video_id 参数实际传入的是 task_id（短格式）
+  // 查询优先使用创建接口返回的 video_id，缺失时才回退 task_id
   // -----------------------------------------------------------
   async function queryAgnesApi(taskId: string): Promise<Record<string, unknown>> {
     const config = client.getConfig();
@@ -87,7 +97,7 @@ export function createVideoService(client: AgnesClient) {
 
   // -----------------------------------------------------------
   // 文生视频 - 提交任务 (POST /v1/videos)
-  // 使用 task_id（短格式）作为 videoId，/agnesapi 需要此格式
+  // 返回 task_id 和 video_id，调用方优先用 video_id 轮询
   // -----------------------------------------------------------
   async function create(params: TextToVideoParams): Promise<{
     taskId: string; videoId: string; numericId: string; syncUrl: string;
@@ -101,13 +111,7 @@ export function createVideoService(client: AgnesClient) {
     };
     const res = await client.post<unknown>("/videos", payload);
     console.debug("[Agnes SDK] POST /videos 响应:", JSON.stringify(res).slice(0, 800));
-    let taskId = "";
-    let videoId = "";
-    if (res && typeof res === "object") {
-      const obj = res as Record<string, unknown>;
-      taskId = String(obj.task_id ?? obj.taskId ?? obj.id ?? "");
-      videoId = String(obj.video_id ?? obj.videoId ?? obj.id ?? "");
-    }
+    const { taskId, videoId } = extractVideoTaskIds(res);
     if (!taskId) throw new Error("创建视频任务失败：" + JSON.stringify(res).slice(0, 300));
     console.debug("[Agnes SDK] 创建结果 - taskId:", taskId, "videoId:", videoId);
     return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
@@ -150,13 +154,7 @@ export function createVideoService(client: AgnesClient) {
     // 4. 发送请求
     const res = await client.post<unknown>("/videos", payload);
     console.debug("[Agnes SDK] POST /videos 图生视频响应:", JSON.stringify(res).slice(0, 800));
-    let taskId = "";
-    let videoId = "";
-    if (res && typeof res === "object") {
-      const obj = res as Record<string, unknown>;
-      taskId = String(obj.task_id ?? obj.taskId ?? obj.id ?? "");
-      videoId = String(obj.video_id ?? obj.videoId ?? obj.id ?? "");
-    }
+    const { taskId, videoId } = extractVideoTaskIds(res);
     if (!taskId) throw new Error("创建图生视频任务失败：" + JSON.stringify(res).slice(0, 300));
     console.debug("[Agnes SDK] 图生视频结果 - taskId:", taskId, "videoId:", videoId);
     return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
@@ -283,7 +281,7 @@ function normalizeTaskProgress(raw: Record<string, unknown>): TaskProgress {
   if (progress === 0 && ["not_start","pending","queued"].some(s => statusRaw.includes(s))) progress = 1;
   const resultUrl = String(innerVideoData?.url ?? innerVideoData?.output_url ?? raw.url ?? raw.output_url ?? raw.remixed_from_video_id ?? deepFind(raw, "url") ?? "");
   const taskId = String(raw.task_id ?? raw.taskId ?? raw.id ?? innerVideoData?.task_id ?? innerVideoData?.taskId ?? innerVideoData?.id ?? "");
-  const videoId = String(raw.video_id ?? raw.videoId ?? raw.id ?? innerVideoData?.id ?? "");
+  const videoId = String(raw.video_id ?? raw.videoId ?? innerVideoData?.video_id ?? innerVideoData?.videoId ?? raw.id ?? innerVideoData?.id ?? "");
   return {
     taskId, status: mapStatus(statusRaw), progress, videoId,
     result: resultUrl ? { url: resultUrl, duration: Number(innerVideoData?.duration ?? raw.duration ?? 0) } : undefined,

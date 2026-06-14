@@ -10,17 +10,23 @@ export function generatePromptPack(
   styleDna: string,
 ): PromptPack {
   // Gather Character DNA blocks for characters in this shot
-  const shotCharacters = characters.filter((c) => shot.characterIds.includes(c.id));
+  const shotCharacterIds = Array.isArray(shot.characterIds) ? shot.characterIds : [];
+  const sceneCharacterIds = Array.isArray(scene.characterIds) ? scene.characterIds : [];
+  const activeCharacterIds = shotCharacterIds.length > 0 ? shotCharacterIds : sceneCharacterIds;
+  const shotCharacters = activeCharacterIds.length > 0
+    ? characters.filter((c) => activeCharacterIds.includes(c.id))
+    : characters;
   const characterDna = shotCharacters.map((c) => c.dnaBlock || c.prompt).filter(Boolean).join("; ");
+  const basePrompt = shot.description || shot.prompt || shot.title || scene.description || scene.title || "";
 
   // Build image prompt
-  const imageParts: string[] = [shot.description || shot.prompt];
+  const imageParts: string[] = [basePrompt];
   if (characterDna) imageParts.push(characterDna);
   if (styleDna) imageParts.push(styleDna);
   const imagePrompt = imageParts.join(", ");
 
   // Build video prompt (slightly different for motion)
-  const videoParts: string[] = [shot.description || shot.prompt];
+  const videoParts: string[] = [basePrompt];
   if (characterDna) videoParts.push(characterDna);
   if (styleDna) videoParts.push(styleDna);
   videoParts.push("cinematic, motion");
