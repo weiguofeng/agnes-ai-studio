@@ -1,10 +1,13 @@
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { EditorTimeline, EditorClip } from "@/types";
 
 interface EditorStoreState {
   timelines: EditorTimeline[];
   activeTimelineId: string | null;
+  // V2.5: Testing mode
+  testingMode: boolean;
+  setTestingMode: (on: boolean) => void;
   createTimeline: (data: Omit<EditorTimeline, "id" | "clips" | "createdAt" | "updatedAt">) => string;
   setActiveTimeline: (id: string | null) => void;
   addClip: (timelineId: string, clip: Omit<EditorClip, "id">) => string;
@@ -34,6 +37,8 @@ export const useEditorStore = create<EditorStoreState>()(
         return id;
       },
       setActiveTimeline: (id) => set({ activeTimelineId: id }),
+      testingMode: false,
+      setTestingMode: (on) => set({ testingMode: on }),
       addClip: (timelineId, data) => {
         const id = genClipId(); const now = Date.now();
         const clip: EditorClip = { ...data, id };

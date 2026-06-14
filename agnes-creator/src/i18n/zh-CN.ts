@@ -394,6 +394,19 @@ const zh: Translations = {
   "pipeline.project": "项目：",
   "pipeline.selectProjectHint": "请选择上面的项目以启动生产流水线",
   "pipeline.imported": "导入完成",
+  // V2.5 Scene Controls
+  "pipeline.viewImage": "查看图片",
+  "pipeline.viewVideo": "查看视频",
+  "pipeline.lockImage": "锁定图片",
+  "pipeline.unlockImage": "解锁图片",
+  "pipeline.lockVideo": "锁定视频",
+  "pipeline.unlockVideo": "解锁视频",
+  "pipeline.regenImage": "重新生成图片",
+  "pipeline.regenVideo": "重新生成视频",
+  "pipeline.deleteImage": "删除图片",
+  "pipeline.deleteVideo": "删除视频",
+  "pipeline.generateImage": "生成图片",
+  "pipeline.generateVideo": "生成视频",
 };
 export default zh;
 

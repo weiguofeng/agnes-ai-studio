@@ -15,7 +15,7 @@ import {
   Wand2, ImageIcon, Video, Film, Download, Play, Pause,
   CheckCircle2, XCircle, Loader2, Clock, RefreshCw, ArrowRight,
   Sparkles, Users, BookTemplate, FolderKanban, FileJson, FileText, Archive,
-  Share2, Eye, EyeOff,
+  Share2, Eye, EyeOff, Lock, Trash2,
 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useProjectStore } from "@/stores/projectStore";
@@ -29,6 +29,7 @@ import { classifyError, withRetry } from "@/lib/errorHandler";
 import { asyncMapThrottled, DEFAULT_CONCURRENCY, DEFAULT_THROTTLE_MS } from "@/lib/concurrency";
 import { useCharacterStore, generateCharacterDna } from "@/stores/characterStore";
 import { useEditorStore } from "@/stores/editorStore";
+import { StorageService } from "@/services/StorageService";
 import { parseStoryToScenes, generateAllPromptPacks } from "@/lib/promptPackGenerator";
 import { downloadImageWithRetry, mapErrorToProductionStatus, getImageFetchErrorLabel } from "@/services/pipelineImageDownloader";
 import type { Scene, Shot, Character, ProductionStatus, PromptPack, ProjectExport } from "@/types";
@@ -671,23 +672,67 @@ function ProductionQueuePanel({ project }: { project: any }) {
           ))}
         </div>
 
-        {/* Queue Items */}
+                {/* Queue Items */}
         <div className="space-y-1 max-h-[400px] overflow-y-auto">
           {displayItems.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-8">{t("pipeline.noItems")}</p>
           )}
           {displayItems.map((item) => (
-            <div key={item.id} className="flex items-center gap-2 rounded border bg-white/[0.02] px-3 py-2 text-xs">
-              <span className="font-medium text-foreground w-16 shrink-0">#{item.order}</span>
+            <div key={item.id} className="flex items-center gap-1.5 rounded border bg-white/[0.02] px-2.5 py-1.5 text-xs">
+              <span className="font-medium text-foreground w-12 shrink-0">#{item.order}</span>
               <span className="truncate flex-1">{item.shotTitle}</span>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 {statusIcon(item.imageStatus)}
                 {statusIcon(item.videoStatus)}
               </div>
-              {item.imageError && <span className="text-red-500 text-[9px] truncate max-w-[100px]" title={item.imageError}>{item.imageError}</span>}
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => resetShot(item.shotId)} title="Regenerate">
-                <RefreshCw className="h-3 w-3" />
-              </Button>
+
+              {/* Image actions */}
+              {item.imageStatus === "completed" && (
+                <>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => window.open(item.imageResultUrl, "_blank")} title={t("pipeline.viewImage")}>
+                    <Eye className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className={"h-6 w-6 p-0 " + (item.imageLocked ? "text-amber-500" : "")}
+                    onClick={() => item.imageLocked ? unlockImage(item.shotId) : lockImage(item.shotId)} title={item.imageLocked ? t("pipeline.unlockImage") : t("pipeline.lockImage")}>
+                    {item.imageLocked ? <Lock className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                  </Button>
+                </>
+              )}
+              {item.imageStatus !== "pending" && item.imageStatus !== "generating" && item.imageStatus !== "completed" && (
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400" onClick={() => regenImageOnly(item.shotId)} title={t("pipeline.regenImage")}>
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              )}
+              {(item.imageStatus === "completed" || item.imageStatus === "image_deleted") && (
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400" onClick={() => { deleteImageAsset(item.shotId); StorageService.deleteAsset(item.shotId); }} title={t("pipeline.deleteImage")}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
+
+              {/* Video actions */}
+              {item.videoStatus === "completed" && (
+                <>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => window.open(item.videoResultUrl, "_blank")} title={t("pipeline.viewVideo")}>
+                    <Eye className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className={"h-6 w-6 p-0 " + (item.videoLocked ? "text-amber-500" : "")}
+                    onClick={() => item.videoLocked ? unlockVideo(item.shotId) : lockVideo(item.shotId)} title={item.videoLocked ? t("pipeline.unlockVideo") : t("pipeline.lockVideo")}>
+                    {item.videoLocked ? <Lock className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                  </Button>
+                </>
+              )}
+              {item.videoStatus !== "pending" && item.videoStatus !== "generating" && item.videoStatus !== "completed" && (
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => regenVideoOnly(item.shotId)} title={t("pipeline.regenVideo")}>
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              )}
+              {(item.videoStatus === "completed" || item.videoStatus === "video_deleted") && (
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400" onClick={() => { deleteVideoAsset(item.shotId); StorageService.deleteAsset(item.shotId); }} title={t("pipeline.deleteVideo")}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
+
+              {item.imageError && <span className="text-red-500 text-[9px] truncate max-w-[80px]" title={item.imageError}>{item.imageError}</span>}
             </div>
           ))}
         </div>

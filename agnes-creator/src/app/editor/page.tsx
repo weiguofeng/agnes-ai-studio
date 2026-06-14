@@ -10,6 +10,8 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useStoryboardStore } from "@/stores/storyboardStore";
 import { Play, Pause, Plus, Trash2, Film, Download, Import, SkipBack, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { StorageService } from "@/services/StorageService";
+import { Upload, FileUp } from "lucide-react";
 
 function TimelineClip({ clip, totalDuration, isSelected, onClick, onDelete }: any) {
   const pct = totalDuration > 0 ? (clip.duration / totalDuration) * 100 : 10;
@@ -306,6 +308,66 @@ export default function EditorPage() {
     setShowImport(false);
   };
 
+
+  // ---- Batch import from files (drag & drop + multi-select) ----
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  
+  const handleFileImport = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    let tlId = activeTimelineId || createTimeline({
+      name: "Import " + new Date().toLocaleTimeString(),
+      projectId: "",
+      fps: 24, width: 1152, height: 768,
+      duration: 0,
+    });
+    let currentStart = 0;
+    for (const file of Array.from(files)) {
+      try {
+        const isVideo = file.type.startsWith("video/");
+        const isImage = file.type.startsWith("image/");
+        if (!isVideo && !isImage) continue;
+        const type = isVideo ? "video" : "image";
+        const blob = new Blob([file], { type: file.type });
+        const result = await StorageService.saveAssetFromBlob({
+          blob, type, projectId: "",
+        });
+        if (!result.success) continue;
+        const url = URL.createObjectURL(blob);
+        const dur = isVideo ? 5 : 3;
+        addClip(tlId, {
+          timelineId: tlId,
+          source: { type: "asset", id: result.data?.id || "" },
+          type,
+          title: file.name,
+          startTime: currentStart,
+          endTime: currentStart + dur,
+          duration: dur,
+          src: url,
+          properties: {},
+        });
+        currentStart += dur;
+      } catch (e) {
+        console.error("Import error:", e);
+      }
+    }
+    setSelectedClipId(null);
+    setShowImport(false);
+  }, [activeTimelineId, createTimeline, addClip]);
+  
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setDragOver(true);
+  }, []);
+  
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setDragOver(false);
+  }, []);
+  
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setDragOver(false);
+    handleFileImport(e.dataTransfer.files);
+  }, [handleFileImport]);
+
   // ---- Cleanup ----
   useEffect(() => {
     return () => {
@@ -435,6 +497,33 @@ export default function EditorPage() {
             <DialogHeader>
               <DialogTitle>{t("editor.sceneImport")}</DialogTitle>
             </DialogHeader>
+            {/* File import zone */}
+                            <div
+                              onDragOver={handleDragOver}
+                              onDragLeave={handleDragLeave}
+                              onDrop={handleDrop}
+                              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${dragOver ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground"}`}
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                multiple
+                                accept="image/*,video/*"
+                                className="hidden"
+                                onChange={(e) => handleFileImport(e.target.files)}
+                              />
+                              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                              <p className="text-sm font-medium">{t("editor.importLabel")}</p>
+                              <p className="text-xs text-muted-foreground mt-1">Click or drag & drop images/videos</p>
+                            </div>
+                
+                            {/* Separator */}
+                            <div className="relative">
+                              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                              <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or import from scenes</span></div>
+                            </div>
+                
             <div className="space-y-3 max-h-60 overflow-y-auto">
               {scenes.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">{t("editor.noScenes")}</p>

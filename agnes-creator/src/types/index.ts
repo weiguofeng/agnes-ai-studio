@@ -89,6 +89,9 @@ export interface Scene {
   title: string;
   description: string;
   order: number;
+  /** V2.6: Scene/Shot numbering */
+  sceneOrder: number;
+  shotOrder: number;
   shots: Shot[];
   prompt?: string;
   renderedPrompt?: string;
@@ -228,7 +231,14 @@ export type ProductionStatus =
   | "image_not_found"
   | "image_rate_limited"
   | "video_api_failed"
-  | "video_timeout";
+  | "video_timeout"
+  // V2.5 Scene Status System
+  | "image_locked"
+  | "video_locked"
+  | "image_deleted"
+  | "video_deleted"
+  | "regenerating_image"
+  | "regenerating_video";
 
 /** Production queue item */
 export interface ProductionQueueItem {
@@ -247,6 +257,8 @@ export interface ProductionQueueItem {
   imageError?: string;
   imageStartedAt?: number;
   imageCompletedAt?: number;
+  /** V2.5: Image lock */
+  imageLocked: boolean;
   /** Video generation */
   videoStatus: ProductionStatus;
   videoTaskId?: string;
@@ -254,6 +266,8 @@ export interface ProductionQueueItem {
   videoRetries: number;
   videoError?: string;
   videoStartedAt?: number;
+  /** V2.5: Video lock */
+  videoLocked: boolean;
   videoCompletedAt?: number;
 }
 

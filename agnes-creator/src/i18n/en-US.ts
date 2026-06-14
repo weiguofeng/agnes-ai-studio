@@ -394,6 +394,19 @@ const en: Translations = {
   "pipeline.project": "Project:",
   "pipeline.selectProjectHint": "Select a project above to start the Production Pipeline",
   "pipeline.imported": "Imported",
+  // V2.5 Scene Controls
+  "pipeline.viewImage": "View Image",
+  "pipeline.viewVideo": "View Video",
+  "pipeline.lockImage": "Lock Image",
+  "pipeline.unlockImage": "Unlock Image",
+  "pipeline.lockVideo": "Lock Video",
+  "pipeline.unlockVideo": "Unlock Video",
+  "pipeline.regenImage": "Regenerate Image",
+  "pipeline.regenVideo": "Regenerate Video",
+  "pipeline.deleteImage": "Delete Image",
+  "pipeline.deleteVideo": "Delete Video",
+  "pipeline.generateImage": "Generate Image",
+  "pipeline.generateVideo": "Generate Video",
 };
 export default en;
 

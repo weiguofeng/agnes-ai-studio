@@ -1,62 +1,52 @@
 ﻿import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { indexedDBStorage } from "@/services/IndexedDBStorage";
 import type { ProductionQueueItem, ProductionStatus } from "@/types";
 import { logger } from "@/lib/logger";
-
 interface ProductionQueueState {
   items: ProductionQueueItem[];
   isPaused: boolean;
   
-  /** Initialize queue from storyboard shots */
   initFromShots: (projectId: string, scenes: Array<{ id: string; title: string; shots: Array<{ id: string; title: string; order: number }> }>) => void;
-  
-  /** Update a single item"s status */
   updateItem: (shotId: string, patch: Partial<ProductionQueueItem>) => void;
-  
-  /** Update image generation status */
   updateImageStatus: (shotId: string, status: ProductionStatus, taskId?: string, resultUrl?: string, error?: string) => void;
-  
-  /** Update video generation status */
   updateVideoStatus: (shotId: string, status: ProductionStatus, taskId?: string, resultUrl?: string, error?: string) => void;
-  
-  /** Reset a specific shot for regeneration */
   resetShot: (shotId: string) => void;
   resetVideoOnly: (shotId: string) => void;
   resetImageOnly: (shotId: string) => void;
-  
-  /** Get queue items for a project */
   getProjectItems: (projectId: string) => ProductionQueueItem[];
   
-  /** Get pending image generation items */
+  // V2.5: Lock/Unlock
+  lockImage: (shotId: string) => void;
+  lockVideo: (shotId: string) => void;
+  unlockImage: (shotId: string) => void;
+  unlockVideo: (shotId: string) => void;
+  
+  // V2.5: Delete asset
+  deleteImageAsset: (shotId: string) => void;
+  deleteVideoAsset: (shotId: string) => void;
+  
+  // V2.5: Single-shot regenerate
+  regenImageOnly: (shotId: string) => void;
+  regenVideoOnly: (shotId: string) => void;
+  
+  // V2.5: Stats
+  getProjectStats: (projectId: string) => { total: number; imagesCompleted: number; videosCompleted: number; imagesLocked: number; videosLocked: number; };
+  
   getPendingImageItems: (projectId: string) => ProductionQueueItem[];
-  
-  /** Get pending video generation items */
   getPendingVideoItems: (projectId: string) => ProductionQueueItem[];
-  
-  /** Pause/resume */
   setPaused: (paused: boolean) => void;
-  
-  /** Clear queue for a project */
   clearProject: (projectId: string) => void;
-  
-  /** Retry management */
   incrementImageRetry: (shotId: string) => void;
   incrementVideoRetry: (shotId: string) => void;
-  
-  /** Get all items for queue persistence check */
   getItems: () => ProductionQueueItem[];
-  
-  /** V2.4: Recover pending tasks on page load */
   recoverPendingTasks: () => Array<{ shotId: string; type: "image" | "video" }>;
 }
-
 let _qCounter = 0;
 function genQueueId(): string {
   _qCounter++; return `prod-${Date.now()}-${_qCounter}`;
 }
-
 const MAX_RETRIES = 3;
-
 export const useProductionQueue = create<ProductionQueueState>()(
   persist(
     (set, get) => ({
@@ -79,6 +69,8 @@ export const useProductionQueue = create<ProductionQueueState>()(
               videoStatus: "pending",
               imageRetries: 0,
               videoRetries: 0,
+              imageLocked: false,
+              videoLocked: false,
             });
           }
         }
@@ -121,12 +113,94 @@ export const useProductionQueue = create<ProductionQueueState>()(
           imageResultUrl: undefined, videoResultUrl: undefined,
           imageError: undefined, videoError: undefined,
           imageRetries: 0, videoRetries: 0,
+          imageLocked: false, videoLocked: false,
         } : i),
       })),
       
       getProjectItems: (projectId) => get().items.filter((i) => i.projectId === projectId),
-      getPendingImageItems: (projectId) => get().items.filter((i) => i.projectId === projectId && i.imageStatus === "pending"),
-      getPendingVideoItems: (projectId) => get().items.filter((i) => i.projectId === projectId && i.videoStatus === "pending" && i.imageStatus === "completed"),
+      
+      resetVideoOnly: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? {
+          ...i, videoStatus: "pending" as ProductionStatus,
+          videoTaskId: undefined, videoResultUrl: undefined,
+          videoError: undefined, videoRetries: 0,
+        } : i),
+      })),
+      
+      resetImageOnly: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? {
+          ...i, imageStatus: "pending" as ProductionStatus,
+          imageTaskId: undefined, imageResultUrl: undefined,
+          imageError: undefined, imageRetries: 0,
+        } : i),
+      })),
+      
+      // V2.5: Lock/Unlock
+      lockImage: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? { ...i, imageLocked: true } : i),
+      })),
+      lockVideo: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? { ...i, videoLocked: true } : i),
+      })),
+      unlockImage: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? { ...i, imageLocked: false } : i),
+      })),
+      unlockVideo: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? { ...i, videoLocked: false } : i),
+      })),
+      
+      // V2.5: Delete asset (marks as deleted, keeps metadata)
+      deleteImageAsset: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? {
+          ...i, imageStatus: "image_deleted" as ProductionStatus,
+          imageResultUrl: undefined, imageTaskId: undefined,
+        } : i),
+      })),
+      deleteVideoAsset: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? {
+          ...i, videoStatus: "video_deleted" as ProductionStatus,
+          videoResultUrl: undefined, videoTaskId: undefined,
+        } : i),
+      })),
+      
+      // V2.5: Single-shot regenerate
+      regenImageOnly: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? {
+          ...i, imageStatus: "regenerating_image" as ProductionStatus,
+          imageTaskId: undefined, imageResultUrl: undefined,
+          imageError: undefined, imageRetries: 0,
+          imageLocked: false,
+        } : i),
+      })),
+      regenVideoOnly: (shotId) => set((s) => ({
+        items: s.items.map((i) => i.shotId === shotId ? {
+          ...i, videoStatus: "regenerating_video" as ProductionStatus,
+          videoTaskId: undefined, videoResultUrl: undefined,
+          videoError: undefined, videoRetries: 0,
+          videoLocked: false,
+        } : i),
+      })),
+      
+      // V2.5: Stats
+      getProjectStats: (projectId) => {
+        const items = get().items.filter((i) => i.projectId === projectId);
+        return {
+          total: items.length,
+          imagesCompleted: items.filter((i) => i.imageStatus === "completed").length,
+          videosCompleted: items.filter((i) => i.videoStatus === "completed").length,
+          imagesLocked: items.filter((i) => i.imageLocked).length,
+          videosLocked: items.filter((i) => i.videoLocked).length,
+        };
+      },
+      
+      // V2.5: Respect locks when getting pending items
+      getPendingImageItems: (projectId) => get().items.filter(
+        (i) => i.projectId === projectId && i.imageStatus === "pending" && !i.imageLocked
+      ),
+      getPendingVideoItems: (projectId) => get().items.filter(
+        (i) => i.projectId === projectId && i.videoStatus === "pending" && !i.videoLocked
+          && i.imageStatus === "completed"
+      ),
       
       setPaused: (paused) => {
         logger.info("ProductionQueue", paused ? "已暂停" : "已恢复");
@@ -165,38 +239,31 @@ export const useProductionQueue = create<ProductionQueueState>()(
           } : i),
         };
       }),
-
       getItems: () => get().items,
-
-      /** 断点恢复：找出所有 generating 状态的任务 */
       recoverPendingTasks: () => {
         const items = get().items;
         const pending: Array<{ shotId: string; type: "image" | "video" }> = [];
         for (const item of items) {
-          if (item.imageStatus === "generating" || item.imageStatus === "pending") {
+          if ((item.imageStatus === "generating" || item.imageStatus === "pending") && !item.imageLocked) {
             pending.push({ shotId: item.shotId, type: "image" });
           }
-          if (item.videoStatus === "generating" || item.videoStatus === "pending") {
+          if ((item.videoStatus === "generating" || item.videoStatus === "pending") && !item.videoLocked) {
             pending.push({ shotId: item.shotId, type: "video" });
           }
         }
         if (pending.length > 0) {
           logger.info("ProductionQueue", `断点恢复: ${pending.length} 个待完成任务`);
-          // Reset generating to pending for retry
           set((s) => ({
             items: s.items.map((i) => ({
               ...i,
-              imageStatus: i.imageStatus === "generating" ? "pending" as ProductionStatus : i.imageStatus,
-              videoStatus: i.videoStatus === "generating" ? "pending" as ProductionStatus : i.videoStatus,
+              imageStatus: i.imageStatus === "generating" && !i.imageLocked ? "pending" as ProductionStatus : i.imageStatus,
+              videoStatus: i.videoStatus === "generating" && !i.videoLocked ? "pending" as ProductionStatus : i.videoStatus,
             })),
           }));
         }
         return pending;
       },
     }),
-    { name: "agnes-production-queue", version: 2 }
+    { name: "agnes-production-queue", version: 4, storage: createJSONStorage(() => indexedDBStorage) }
   )
 );
-
-
-

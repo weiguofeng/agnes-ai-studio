@@ -1,0 +1,1 @@
+$env:HOME="E:\codex-project-source\agnes-ai-studio"; Start-Process -WindowStyle Hidden -FilePath "node" -WorkingDirectory "E:\codex-project-source\agnes-ai-studio\agnes-creator" -ArgumentList "./node_modules/next/dist/bin/next dev"
