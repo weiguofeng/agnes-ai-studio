@@ -2,7 +2,7 @@
 
 ## Current Version
 
-V2.9
+V3.0
 
 ---
 
@@ -27,59 +27,78 @@ Story -> Storyboard -> Prompt -> Image -> Image-to-Video -> Assets Library -> Vi
 - Internationalization System
 - API Key Management
 - QA Testing
-- Production Pipeline
-- V2.7 Production Dashboard
+- Production Pipeline (V2.7+)
 - V2.8 Production Hardening
 - V2.9 Pipeline UX & Recovery Hardening
-- V2.9 Pipeline Prompt Crash Fix
-- V2.9 Production Queue Batch Image Fix
-- V2.9 Production Queue Video Task Fix
-- V2.9 Production Queue Control & Storage Fix
-- V2.9 Storage Proxy Fallback Fix
-- V2.9 Timeline Import Recovery Fix
-- V2.9 Agnes Polling Rate-Limit Backoff Fix
-- V2.9 Closed-Loop QA Gate
-- V2.9 Timeline Playback Import Fix
-- V2.9 Dev Startup Recovery Fix
-- V2.9 Multi-Character Image Compositing
-- V2.9 Video Duration Control
-- V2.9 ProductionQueueItem videoDurationFrames
-- V2.9 StoryboardPreview & CharacterImageSection Pipeline Refactor
+- V3.0 Pipeline Queue Refactoring (see current state)
 
 ---
 
 ## QA Status
 
-- Build: passed with `next build`
-- TypeScript: passed with `tsc --noEmit`
-- Lint: passed through `eslint src` with existing warnings
-- Unit Tests: production hardening, production queue, storage fallback, Agnes polling regressions, timeline playback import, and closed-loop QA gate regressions passed with 9 files / 76 tests in the latest local pass
-- Browser QA: `http://localhost:3001` returned HTTP 200 after the dev server restart
-- Export QA: JSON pipeline export downloaded and parsed successfully in the previous pass
-- Closed-Loop QA: `agnes-creator` now has `npm run qa:closed-loop`, `npm run typecheck`, `npm run test:unit`, `npm run test:smoke`, and `npm run test:integration` script entry points. The closed-loop plan and report template live in `docs/QA_CLOSED_LOOP_PLAN.md` and `docs/QA_CLOSED_LOOP_REPORT_TEMPLATE.md`.
-- Lint Gate: `npm run lint` now uses ESLint CLI (`eslint src`) instead of deprecated `next lint`; `npm run lint:report` can generate a JSON warning baseline.
+- Build: passed with `npm run build`
+- All 23 pages compile successfully
 
 ---
 
-## Core Workflow
+## Current State (V3.0)
 
-Story -> Storyboard -> Prompt -> Image -> Image-to-Video -> Assets Library -> Video Editor -> Export
+### Production Pipeline Architecture
 
----
+The pipeline page (`/pipeline`) is the main production interface. It has a two-column layout:
 
-## Current Development Focus
+**Left Column:** StoryboardPreview + CharacterImageSection
+**Right Column:** StatisticsPanel, CurrentTasksWidget, ProductionQueuePanel, StorageMonitor, ProjectExportPanel
 
-V2.9 adds multi-character image compositing (see details below) and video duration control to the production pipeline.
+### Production Queue
 
-Multi-character compositing: When a shot scene involves multiple characters, their generated reference images are automatically composited into a single image (horizontal layout) before being sent to the image-to-video API. This ensures visual consistency across all characters in the generated video. The compositing is handled by `src/lib/imageCompositor.ts`.
+The queue focuses **only on video generation**. Image generation has been removed from the queue.
 
-Video duration control: Each shot card in the production queue now has a duration selector with presets (3s/5s/8s/10s/18s) and custom input (1-30s). The selected duration is converted to `numFrames` (at 24fps) and passed directly to the Agnes Video V2.0 API. The per-shot duration is persisted in the production queue store via the `videoDurationFrames` field.
+**QueueCardView features:**
+- Video preview only (full-width, no side-by-side image preview)
+- Character image thumbnails per shot (clickable for full preview)
+- Truncated prompt display with click-to-expand editing
+- Video duration selector (3s/5s/8s/10s/18s/custom)
+- Video status badge, lock/unlock, regenerate, delete actions
+- Batch operations (generate videos, pause, resume, delete, lock)
 
-The old storyboard generator (text-to-storyboard AI) and CharacterDnaPanel have been removed from the pipeline page. The left panel now shows StoryboardPreview (reads from project scenes) and CharacterImageSection (generates character reference images). The sidebar no longer includes AI Story Studio and Storyboard Design menu items.
-## Known Issues
+### Video Generation Flow
 
-1. Agnes service responses can still include 500 errors or remote task lookup failures. The client must keep image-to-video as the main workflow and use retry/recovery/pause rather than text-to-video fallback.
-2. Historical ESLint warnings still need cleanup in V2.9.
-3. `eslint src` still reports existing warnings unrelated to this startup fix.
+1. Shots are loaded from project scenes via "Load to Queue" button
+2. Character reference images are generated in CharacterImageSection (stored in `project.characterImages`)
+3. User selects shots and clicks "Batch Generate Videos"
+4. `hasVideoSourceImage` checks if each shot has either legacy `imageResultUrl` or character image URLs
+5. `handleGenerateVideo` creates video via Agnes API:
+   - **Single character:** passes image URL as `"image": "url"` (string)
+   - **Multi character:** passes image URLs as `"extra_body": { "image": ["url1", "url2"] }` (array)
+   - Uses JSON POST (not FormData) to `POST /v1/videos`
+   - The API server fetches images from URLs directly (no CORS issues)
+6. Result is polled via `/agnesapi?video_id=<ID>` with rate limiting
 
+### Rate Limiting (video.ts)
 
+- `PollRateLimiter`: max 2 concurrent /agnesapi queries
+- Initial stagger: random 0-2000ms before first poll
+- Jitter: ±30% random on each poll interval
+- 429 backoff: interval × 2.5 on rate limit
+- Default interval: 4000ms, max: 30000ms
+
+### API Integration
+
+- `createFromImage` sends JSON POST with image URL(s) - NOT FormData/file upload
+- `client.ts` `postForm` no longer sets `Content-Type` header manually (fixes missing boundary)
+- Image-to-video and text-to-video use the same endpoint `/v1/videos`
+- Model: `agnes-video-v2.0`
+
+### Character Image Handling
+
+- Character images are stored in `project.characterImages` (Record<string, string>)
+- Generated from CharacterImageSection via Agnes Image API
+- Images are hosted on Agnes CDN (no CORS headers)
+- For display/preview, images are loaded directly (CORS error handled gracefully)
+- For video generation, URLs are passed to Agnes API which fetches them server-side
+
+### Known Issues
+
+1. Character CDN images lack CORS headers - browser-side canvas operations (compositeImages) require server proxy fallback. This is handled by downloading via `/api/pipeline/download-image` before compositing.
+2. Legacy `imageResultUrl` field may still exist on queue items from old sessions but is no longer the primary image source.

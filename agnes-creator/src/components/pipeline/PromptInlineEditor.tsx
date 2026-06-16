@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/i18n";
 import { usePromptHistoryStore, type PromptVersion } from "@/stores/promptHistoryStore";
-import { Edit3, Save, RotateCcw, History } from "lucide-react";
+import { Edit3, Save, RotateCcw, History, ChevronDown, ChevronUp } from "lucide-react";
 
 interface PromptInlineEditorProps {
   shotId: string;
@@ -14,10 +14,12 @@ interface PromptInlineEditorProps {
 }
 
 const EMPTY_HISTORY: PromptVersion[] = [];
+const COLLAPSE_LENGTH = 80;
 
 export function PromptInlineEditor({ shotId, initialPrompt, defaultPrompt, onSave }: PromptInlineEditorProps) {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
+  const [showFull, setShowFull] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt || defaultPrompt);
   const historyVersions = usePromptHistoryStore((s) => (s.history || {})[shotId] || EMPTY_HISTORY);
   const saveVersion = usePromptHistoryStore((s) => s.saveVersion);
@@ -36,16 +38,21 @@ export function PromptInlineEditor({ shotId, initialPrompt, defaultPrompt, onSav
   };
 
   const displayPrompt = initialPrompt || defaultPrompt || "-";
+  const isLong = displayPrompt.length > COLLAPSE_LENGTH;
+  const truncatedPrompt = isLong ? displayPrompt.slice(0, COLLAPSE_LENGTH) + "..." : displayPrompt;
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <button
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={() => {
+            setIsEditing(true);
+            setShowFull(true);
+          }}
           className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
         >
           <Edit3 className="h-3 w-3" />
-          {isEditing ? t("common.close") : t("pipeline.editPrompt")}
+          {t("pipeline.clickToExpandPrompt")}
         </button>
         {!isEditing && historyVersions.length > 0 && (
           <button
@@ -76,9 +83,32 @@ export function PromptInlineEditor({ shotId, initialPrompt, defaultPrompt, onSav
           </div>
         </div>
       ) : (
-        <p className="text-[11px] text-muted-foreground leading-relaxed whitespace-pre-wrap break-words">
-          {displayPrompt}
-        </p>
+        <div>
+          <p
+            className="text-[11px] text-muted-foreground leading-relaxed whitespace-pre-wrap break-words cursor-pointer hover:text-foreground transition-colors"
+            onClick={() => setShowFull(!showFull)}
+          >
+            {showFull ? displayPrompt : truncatedPrompt}
+          </p>
+          {isLong && !showFull && (
+            <button
+              onClick={() => setShowFull(true)}
+              className="flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 mt-0.5"
+            >
+              <ChevronDown className="h-3 w-3" />
+              {t("common.expand") || "展开"}
+            </button>
+          )}
+          {isLong && showFull && (
+            <button
+              onClick={() => setShowFull(false)}
+              className="flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 mt-0.5"
+            >
+              <ChevronUp className="h-3 w-3" />
+              {t("common.collapse") || "收起"}
+            </button>
+          )}
+        </div>
       )}
 
       {showHistory && historyVersions.length > 0 && (

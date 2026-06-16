@@ -46,7 +46,7 @@ function isLikelyShortPrompt(prompt: string | undefined, shotTitle?: string): bo
   const value = (prompt || "").trim();
   if (!value) return true;
   if (shotTitle && value === shotTitle.trim()) return true;
-  return value.length < 80 && /^(镜头|Shot)\s*\d*[:：]/i.test(value) && value.endsWith("...");
+  return value.length < 80 && /^(Shot|Shot)\s*\d*[:]/i.test(value) && value.endsWith("...");
 }
 
 function ProductionQueuePanel({ project, characters }: { project: any; characters: Character[] }) {
@@ -54,47 +54,57 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
   const queue = useProductionQueue();
   const config = useConfigStore();
   const editorStore = useEditorStore();
-  const [processingImages, setProcessingImages] = useState<Set<string>>(new Set());
   const [processingVideos, setProcessingVideos] = useState<Set<string>>(new Set());
   const videoAbortControllers = useRef<Map<string, AbortController>>(new Map());
-  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [videoUrls, setVideoUrls] = useState<Record<string, string>>({});
 
   const projectScenes = useMemo(() => project.scenes || [], [project.scenes]);
   const projectItems = useMemo(() => queue.getProjectItems(project.id), [queue, project.id]);
-  const lockedCharacters = useMemo(() => {
-    const lockedIds = project.lockedCharacterIds || [];
-    return characters.filter((character) => lockedIds.includes(character.id));
-  }, [characters, project.lockedCharacterIds]);
 
-  const shotCharImageCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
+  // V3.0: Build shot -> character image URLs mapping
+  const shotCharacterImages = useMemo(() => {
+    const mapping: Record<string, string[]> = {};
     const charImages: Record<string, string> = (project as any).characterImages || {};
     for (const scene of projectScenes) {
       for (const shot of scene.shots) {
         const charIds: string[] = (shot as any).characterIds || [];
-        const validUrls = charIds.filter((cid: string) => charImages[cid]);
-        if (validUrls.length > 0) {
-          counts[shot.id] = validUrls.length;
+        const urls = charIds.map((cid: string) => charImages[cid]).filter((url: string | undefined): url is string => !!url);
+        if (urls.length > 0) {
+          mapping[shot.id] = urls;
         }
       }
     }
-    return counts;
+    return mapping;
   }, [projectScenes, project]);
+
+  // V3.0: Build characterId -> character name mapping
+  const characterNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const c of characters) {
+      names[c.id] = c.name;
+    }
+    return names;
+  }, [characters]);
+
+  // V3.0: Get character IDs for a shot
+  const getShotCharacterIds = useCallback((shotId: string): string[] => {
+    for (const scene of projectScenes) {
+      for (const shot of scene.shots) {
+        if (shot.id === shotId) {
+          return (shot as any).characterIds || [];
+        }
+      }
+    }
+    return [];
+  }, [projectScenes]);
+
   const selectedIds = queue.selectedShotIds;
 
   useEffect(() => {
-    const imgMap: Record<string, string> = {};
     const vidMap: Record<string, string> = {};
     for (const item of projectItems) {
-      if (item.imageResultUrl) imgMap[item.shotId] = item.imageResultUrl;
       if (item.videoResultUrl) vidMap[item.shotId] = item.videoResultUrl;
     }
-    setImageUrls((prev) => {
-      const prevKeys = JSON.stringify(prev);
-      const newKeys = JSON.stringify(imgMap);
-      return prevKeys === newKeys ? prev : imgMap;
-    });
     setVideoUrls((prev) => {
       const prevKeys = JSON.stringify(prev);
       const newKeys = JSON.stringify(vidMap);
@@ -102,78 +112,9 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
     });
   }, [projectItems]);
 
-  const getShotTitle = useCallback((shotId: string): string => {
-    for (const scene of projectScenes) {
-      const shot = scene.shots.find((s: Shot) => s.id === shotId);
-      if (shot) return shot.renderedPrompt || shot.prompt || shot.description || shot.title || "";
-    }
-    return "";
-  }, [projectScenes]);
-
-  const getPromptPackForShot = useCallback((shotId: string): PromptPack | null => {
-    for (const scene of projectScenes) {
-      const shot = scene.shots.find((candidate: Shot) => candidate.id === shotId);
-      if (shot) return generatePromptPack(shot, scene, lockedCharacters, project.styleDna || "");
-    }
-    return null;
-  }, [projectScenes, lockedCharacters, project.styleDna]);
-
-  useEffect(() => {
-    for (const item of projectItems) {
-      const pack = getPromptPackForShot(item.shotId);
-      if (!pack) continue;
-      const nextImagePrompt = isLikelyShortPrompt(item.imagePrompt, item.shotTitle) ? pack.imagePrompt : item.imagePrompt;
-      const nextVideoPrompt = isLikelyShortPrompt(item.videoPrompt, item.shotTitle) ? pack.videoPrompt : item.videoPrompt;
-      const nextCustomPrompt = isLikelyShortPrompt(item.customPrompt, item.shotTitle) ? undefined : item.customPrompt;
-      const nextNegativePrompt = item.negativePrompt || pack.negativePrompt;
-      if (nextImagePrompt !== item.imagePrompt || nextVideoPrompt !== item.videoPrompt || nextCustomPrompt !== item.customPrompt || nextNegativePrompt !== item.negativePrompt) {
-        queue.updateItem(item.shotId, {
-          imagePrompt: nextImagePrompt,
-          videoPrompt: nextVideoPrompt,
-          customPrompt: nextCustomPrompt,
-          negativePrompt: nextNegativePrompt,
-        });
-      }
-    }
-  }, [projectItems, getPromptPackForShot, queue]);
-
-  const getImagePrompt = useCallback((item: any): string => item.customPrompt || item.imagePrompt || getShotTitle(item.shotId) || item.shotTitle || "", [getShotTitle]);
-  const getVideoPrompt = useCallback((item: any): string => item.customPrompt || item.videoPrompt || item.imagePrompt || getShotTitle(item.shotId) || item.shotTitle || "", [getShotTitle]);
-
-  const getImageUrl = useCallback((shotId: string): string | undefined => imageUrls[shotId], [imageUrls]);
   const getVideoUrl = useCallback((shotId: string): string | undefined => videoUrls[shotId], [videoUrls]);
 
-  const handleGenerateImage = useCallback(async (shotId: string) => {
-    if (processingImages.has(shotId)) return;
-    setProcessingImages((prev) => new Set(prev).add(shotId));
-    try {
-      const item = projectItems.find((i) => i.shotId === shotId);
-      if (!item || item.imageLocked) return;
-      const prompt = getImagePrompt(item);
-      if (!prompt.trim()) {
-        queue.updateImageStatus(shotId, "failed", undefined, undefined, t("pipeline.promptRequired"));
-        return;
-      }
-      queue.updateImageStatus(shotId, "generating");
-      const images = await agnes.image.generate({
-        prompt: prompt.trim(),
-        size: "1024x1024",
-        n: 1,
-        model: config.textToImageModel || config.model || "agnes-image-2.1-flash",
-      });
-      const imageUrl = images[0]?.url;
-      if (!imageUrl) throw new Error(t("pipeline.noImageResult"));
-      queue.updateImageStatus(shotId, "completed", undefined, imageUrl);
-      markDirty();
-      setImageUrls((prev) => ({ ...prev, [shotId]: imageUrl }));
-      try { await StorageService.saveAssetFromUrl({ url: imageUrl, type: "image", projectId: project.id, shotId }); } catch { /* non-critical */ }
-    } catch (err) {
-      const classified = ErrorClassifier.classify(err);
-      queue.updateImageStatus(shotId, "failed", undefined, undefined, `${classified.type}: ${classified.userMessage}`);
-    } finally {
-      setProcessingImages((prev) => { const n = new Set(prev); n.delete(shotId); return n; });
-    }
-  }, [processingImages, projectItems, queue, project.id, getImagePrompt, config.textToImageModel, config.model, t]);
+  const getVideoPrompt = useCallback((item: any): string => item.customPrompt || item.videoPrompt || item.imagePrompt || item.shotTitle || item.sceneTitle || "", []);
 
   const handleGenerateVideo = useCallback(async (shotId: string) => {
     if (processingVideos.has(shotId)) return;
@@ -188,31 +129,31 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
       const shotData = shotScene?.shots.find((sh: any) => sh.id === shotId);
       const charIds: string[] = shotData?.characterIds || [];
       const charImages: Record<string, string> = (project as any).characterImages || {};
-      const charImageUrls = charIds.filter((cid: string) => charImages[cid]);
+      // Map char IDs to actual image URLs; filter out chars without images
+      const charImageUrls = charIds
+        .filter((cid: string) => charImages[cid])
+        .map((cid: string) => charImages[cid]);
       const hasMultiCharImages = charImageUrls.length > 1;
       const hasSingleCharImage = charImageUrls.length === 1;
-      let sourceImageUrl = item.imageResultUrl;
-      if (hasMultiCharImages) { sourceImageUrl = charImageUrls[0]; }
-      else if (hasSingleCharImage && !sourceImageUrl) { sourceImageUrl = charImageUrls[0]; }
-      if (!sourceImageUrl) { queue.updateVideoStatus(shotId, "failed", undefined, undefined, t("pipeline.videoRequiresImage")); return; }
+      let imageSource: string | string[] | undefined;
+      // Determine source image(s) - pass URLs directly, API fetches them server-side
+      if (hasMultiCharImages) {
+        // Multi-character shot: pass all character image URLs as array
+        imageSource = charImageUrls;
+      } else if (hasSingleCharImage) {
+        // Single character shot: use character image URL
+        imageSource = charImageUrls[0];
+      } else if (item.imageResultUrl) {
+        // Legacy fallback: use existing image result URL
+        imageSource = item.imageResultUrl;
+      }
+      if (!imageSource) { queue.updateVideoStatus(shotId, "failed", undefined, undefined, t("pipeline.videoRequiresImage")); return; }
       queue.updateVideoStatus(shotId, "generating");
       const prompt = getVideoPrompt(item);
       const numFrames = item.videoDurationFrames || 121;
-      localTaskId = useTaskStore.getState().addTask({id: `pipeline-video-${shotId}-${Date.now()}`,taskId: "",type: "image-to-video",model: config.imageToVideoModel || "agnes-video-v2.0",prompt,status: "uploading",progress: 0,resultUrl: "",thumbnail: item.imageResultUrl || "",errorMessage: "",params: { projectId: project.id, shotId, numFrames }});
-      let imageBlob: Blob;
-      if (hasMultiCharImages) {
-        const compositeBlob = await compositeImages(charImageUrls);
-        if (!compositeBlob) throw new Error('Failed to composite character images');
-        imageBlob = compositeBlob;
-      } else {
-        const imageFetch = await downloadImageWithRetry(sourceImageUrl, { shotId, maxRetries: 2 });
-        if (abortController.signal.aborted) { queue.updateVideoStatus(shotId, 'cancelled', undefined, undefined, t('pipeline.taskCancelled')); useTaskStore.getState().updateTask(localTaskId, { status: 'cancelled', errorMessage: t('pipeline.taskCancelled') }); return; }
-        if (!imageFetch.success || !imageFetch.dataUrl) { var status = mapErrorToProductionStatus(imageFetch.errorType); queue.updateVideoStatus(shotId, status, undefined, undefined, imageFetch.errorMessage); useTaskStore.getState().updateTask(localTaskId, { status: 'failed', errorMessage: imageFetch.errorMessage }); return; }
-        const imgResp = await fetch(imageFetch.dataUrl);
-        imageBlob = await imgResp.blob();
-      }
-      useTaskStore.getState().updateTask(localTaskId, { status: 'submitted' });
-      const videoTask = await agnes.video.createFromImage({ image: imageBlob, prompt, model: config.imageToVideoModel || 'agnes-video-v2.0', numFrames });
+      localTaskId = useTaskStore.getState().addTask({id: "pipeline-video-" + shotId + "-" + Date.now(),taskId: "",type: "image-to-video",model: config.imageToVideoModel || "agnes-video-v2.0",prompt,status: "uploading",progress: 0,resultUrl: "",thumbnail: typeof imageSource === "string" ? imageSource : (Array.isArray(imageSource) ? imageSource[0] || "" : ""),errorMessage: "",params: { projectId: project.id, shotId, numFrames }});
+      useTaskStore.getState().updateTask(localTaskId, { status: "submitted" });      useTaskStore.getState().updateTask(localTaskId, { status: 'submitted' });
+      const videoTask = await agnes.video.createFromImage({ image: imageSource, prompt, model: config.imageToVideoModel || 'agnes-video-v2.0', numFrames });
       if (videoTask && videoTask.taskId) {
         var pollId = videoTask.videoId || videoTask.taskId;
         queue.updateVideoStatus(shotId, 'generating', pollId);
@@ -242,12 +183,26 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
     queue.updateItem(shotId, { videoDurationFrames: frames });
   }, [queue]);
 
-  const handleBatchGenerateImages = useCallback(() => { for (const sid of selectedIds) handleGenerateImage(sid); queue.deselectAllShots(); }, [selectedIds, handleGenerateImage, queue]);
+  /** Check if a shot has a usable source image (character image or legacy result) */
+  const hasVideoSourceImage = useCallback((shotId: string): boolean => {
+    const item = projectItems.find((i) => i.shotId === shotId);
+    if (!item) return false;
+    if (item.imageResultUrl) return true;
+    // Check character images
+    const shotScene = projectScenes.find((sc: any) => sc.shots.some((sh: any) => sh.id === shotId));
+    if (!shotScene) return false;
+    const shotData = shotScene.shots.find((sh: any) => sh.id === shotId);
+    if (!shotData) return false;
+    const charIds: string[] = shotData.characterIds || [];
+    const charImages: Record<string, string> = (project as any).characterImages || {};
+    return charIds.some((cid: string) => charImages[cid]);
+  }, [projectItems, projectScenes, project]);
+
   const handleBatchGenerateVideos = useCallback(() => {
     const runnableIds = selectedIds.filter((sid) => {
       const item = projectItems.find((i) => i.shotId === sid);
       if (!item || item.videoLocked) return false;
-      if (!item.imageResultUrl) {
+      if (!hasVideoSourceImage(sid)) {
         queue.updateVideoStatus(sid, "failed", undefined, undefined, t("pipeline.videoRequiresImage"));
         return false;
       }
@@ -255,16 +210,13 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
     });
     for (const sid of runnableIds) handleGenerateVideo(sid);
     queue.deselectAllShots();
-  }, [selectedIds, projectItems, handleGenerateVideo, queue, t]);
+  }, [selectedIds, projectItems, handleGenerateVideo, queue, t, hasVideoSourceImage]);
   const handleBatchPause = useCallback(() => {
     for (const shotId of selectedIds) {
       videoAbortControllers.current.get(shotId)?.abort();
       const activeTasks = useTaskStore.getState().tasks.filter((task) => task.params?.shotId === shotId && !["completed", "failed", "timeout", "cancelled"].includes(task.status));
       for (const task of activeTasks) useTaskStore.getState().updateTask(task.id, { status: "cancelled", errorMessage: t("pipeline.taskCancelled") });
       const item = projectItems.find((candidate) => candidate.shotId === shotId);
-      if (item?.imageStatus === "generating" || item?.imageStatus === "regenerating_image") {
-        queue.updateImageStatus(shotId, "cancelled", undefined, undefined, t("pipeline.taskCancelled"));
-      }
       if (item?.videoStatus === "generating" || item?.videoStatus === "regenerating_video") {
         queue.updateVideoStatus(shotId, "cancelled", undefined, undefined, t("pipeline.taskCancelled"));
       }
@@ -393,7 +345,6 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
           </div>
           <BatchOperations
             selectedCount={selectedIds.length}
-            onBatchGenerateImages={handleBatchGenerateImages}
             onBatchGenerateVideos={handleBatchGenerateVideos}
             onBatchPause={handleBatchPause}
             onBatchResume={handleBatchResume}
@@ -406,21 +357,17 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
             items={projectItems}
             selectedIds={selectedIds}
             onToggleSelect={(sid) => queue.toggleSelectShot(sid)}
-            onGenerateImage={handleGenerateImage}
             onGenerateVideo={handleGenerateVideo}
-            onRegenImage={(sid) => { queue.regenImageOnly(sid); handleGenerateImage(sid); }}
             onRegenVideo={(sid) => { queue.regenVideoOnly(sid); handleGenerateVideo(sid); }}
-            onLockImage={(sid) => queue.lockImage(sid)}
-            onUnlockImage={(sid) => queue.unlockImage(sid)}
             onLockVideo={(sid) => queue.lockVideo(sid)}
             onUnlockVideo={(sid) => queue.unlockVideo(sid)}
-            onDeleteImage={(sid) => queue.deleteImageAsset(sid)}
             onDeleteVideo={(sid) => queue.deleteVideoAsset(sid)}
             onSavePrompt={handleSavePrompt}
-            getImageUrl={getImageUrl}
             getVideoUrl={getVideoUrl}
             onUpdateVideoDuration={handleUpdateVideoDuration}
-            shotCharImageCounts={shotCharImageCounts}
+            shotCharacterImages={shotCharacterImages}
+            characterNames={characterNames}
+            getShotCharacterIds={getShotCharacterIds}
           />
         </CardContent>
       </Card>
@@ -439,6 +386,7 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
     </div>
   );
 }
+
 
 function ProjectExportPanel({ project, characters, generatedScenes }: { project: any; characters: Character[]; generatedScenes: any[] }) {
   const { t } = useTranslation();
@@ -524,7 +472,7 @@ function LastSavedIndicator() {
   if (!savedAt) return null;
   return (
     <span className="text-[10px] text-muted-foreground ml-2">
-      {t("common.lastSaved") || "最后保存"}: {new Date(savedAt).toLocaleTimeString()}
+      {t("common.lastSaved")}: {new Date(savedAt).toLocaleTimeString()}
     </span>
   );
 }
@@ -613,4 +561,14 @@ export default function PipelinePage() {
     </AppShell>
   );
 }
+
+
+
+
+
+
+
+
+
+
 

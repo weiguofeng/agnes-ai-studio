@@ -165,7 +165,7 @@ export function createClient() {
       instance.post(url, data, config) as Promise<T>,
     postForm: <T = unknown>(url: string, formData: FormData): Promise<T> =>
       instance.post(url, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        // NOTE: Do NOT set Content-Type manually - let axios set it with the boundary
       }) as Promise<T>,
   };
 }

@@ -485,7 +485,9 @@ const zh: Translations = {
   "pipeline.customDuration": "自定义",
   "pipeline.durationSeconds": "秒",
   "pipeline.multiImage": "多角色图片",
-  "pipeline.multiImageDesc": "此镜头关联了多个角色，将使用所有角色的参考图合成后生成视频。",
+  "pipeline.multiImageDesc": "此镜头关联了多个角色，将使用所有角色的参考图合成后生成视频。",
+  "pipeline.charImagesInQueue": "角色图",
+  "pipeline.clickToExpandPrompt": "点击展开编辑",
 
 
 
@@ -525,3 +527,4 @@ const zh: Translations = {
 
 };
 export default zh;
+

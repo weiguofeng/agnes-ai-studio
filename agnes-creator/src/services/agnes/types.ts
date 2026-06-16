@@ -54,16 +54,16 @@ export interface TextToVideoParams {
 
 /** 图生视频请求参数 */
 export interface ImageToVideoParams {
-  image: File | Blob;
-  prompt?: string;
-  model?: string;
-  height?: number;
-  width?: number;
-  numFrames?: number;
-  frameRate?: number;
-  negativePrompt?: string;
-  seed?: number;
-}
+    image?: File | Blob | string | string[];
+    prompt?: string;
+    model?: string;
+    height?: number;
+    width?: number;
+    numFrames?: number;
+    frameRate?: number;
+    negativePrompt?: string;
+    seed?: number;
+  }
 
 /** 图片结果 */
 export interface ImageResult {

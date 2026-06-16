@@ -1,11 +1,10 @@
 ﻿"use client";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n";
-import { Image, Video, Pause, Play, Trash2, Lock, Film } from "lucide-react";
+import { Video, Pause, Play, Trash2, Lock, Film } from "lucide-react";
 
 interface BatchOperationsProps {
   selectedCount: number;
-  onBatchGenerateImages: () => void;
   onBatchGenerateVideos: () => void;
   onBatchPause: () => void;
   onBatchResume: () => void;
@@ -15,7 +14,7 @@ interface BatchOperationsProps {
 }
 
 export function BatchOperations({
-  selectedCount, onBatchGenerateImages, onBatchGenerateVideos,
+  selectedCount, onBatchGenerateVideos,
   onBatchPause, onBatchResume, onBatchDelete, onBatchLock,
   onBatchImportTimeline,
 }: BatchOperationsProps) {
@@ -23,7 +22,6 @@ export function BatchOperations({
   const hasSelection = selectedCount > 0;
 
   const buttons = [
-    { label: t("pipeline.batchGenerateImages"), icon: Image, onClick: onBatchGenerateImages, disabled: !hasSelection },
     { label: t("pipeline.batchGenerateVideos"), icon: Video, onClick: onBatchGenerateVideos, disabled: !hasSelection },
     { label: t("pipeline.batchPause"), icon: Pause, onClick: onBatchPause, disabled: !hasSelection },
     { label: t("pipeline.batchResume"), icon: Play, onClick: onBatchResume, disabled: !hasSelection },

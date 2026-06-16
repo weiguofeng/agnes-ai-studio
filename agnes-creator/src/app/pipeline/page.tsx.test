@@ -1,0 +1,293 @@
+﻿"use client";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { AppShell } from "@/components/layout/AppShell";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Download, CheckCircle2, Loader2, Sparkles, Users, FileJson, FileText, Archive, LayoutDashboard,
+} from "lucide-react";
+import { useTranslation } from "@/i18n";
+import { useProjectStore } from "@/stores/projectStore";
+import { useProductionQueue } from "@/stores/productionQueueStore";
+import { agnes } from "@/services/agnes";
+import { useConfigStore } from "@/stores/configStore";
+import { logger } from "@/lib/logger";
+import { useCharacterStore } from "@/stores/characterStore";
+import { useEditorStore } from "@/stores/editorStore";
+import { StorageService } from "@/services/StorageService";
+import { parseStoryToScenes, generateAllPromptPacks, generatePromptPack } from "@/lib/promptPackGenerator";
+import { downloadImageWithRetry, mapErrorToProductionStatus } from "@/services/pipelineImageDownloader";
+import { ErrorClassifier } from "@/services/errorClassifier";
+import type { Scene, Shot, Character, PromptPack, ProjectExport, ShotType } from "@/types";
+import { startAutoSave, stopAutoSave, getLastSavedAt, markDirty } from "@/services/ProjectAutoSaveService";
+import { usePromptHistoryStore } from "@/stores/promptHistoryStore";
+import { useTaskStore } from "@/stores/taskStore";
+import { StoryboardPreview } from "@/components/pipeline/StoryboardPreview";
+import { CharacterImageSection } from "@/components/pipeline/CharacterImageSection";
+import { compositeImages } from "@/lib/imageCompositor";
+import { StatisticsPanel } from "@/components/pipeline/StatisticsPanel";
+import { QueueCardView } from "@/components/pipeline/QueueCardView";
+import { BatchOperations } from "@/components/pipeline/BatchOperations";
+import { TimelineImport } from "@/components/pipeline/TimelineImport";
+import { StorageMonitor } from "@/components/pipeline/StorageMonitor";
+import { ProductionModeToggle } from "@/components/pipeline/ProductionModeToggle";
+import { CurrentTasksWidget } from "@/components/pipeline/CurrentTasksWidget";
+import { VideoDurationSelector } from "@/components/pipeline/VideoDurationSelector";
+
+function isLikelyShortPrompt(prompt: string | undefined, shotTitle?: string): boolean {
+  const value = (prompt || "").trim();
+  if (!value) return true;
+  if (shotTitle && value === shotTitle.trim()) return true;
+  return value.length < 80 && /^(锟斤拷头|Shot)\s*\d*[:锟斤拷]/i.test(value) && value.endsWith("...");
+}
+
+function ProductionQueuePanel({ project, characters }: { project: any; characters: Character[] }) {
+  const { t } = useTranslation();
+  const queue = useProductionQueue();
+  const config = useConfigStore();
+  const editorStore = useEditorStore();
+  const [processingVideos, setProcessingVideos] = useState<Set<string>>(new Set());
+  const videoAbortControllers = useRef<Map<string, AbortController>>(new Map());
+  const [videoUrls, setVideoUrls] = useState<Record<string, string>>({});
+
+  const projectScenes = useMemo(() => project.scenes || [], [project.scenes]);
+  const projectItems = useMemo(() => queue.getProjectItems(project.id), [queue, project.id]);
+
+  // V3.0: Build shot -> character image URLs mapping
+  const shotCharacterImages = useMemo(() => {
+    const mapping: Record<string, string[]> = {};
+    const charImages: Record<string, string> = (project as any).characterImages || {};
+    for (const scene of projectScenes) {
+      for (const shot of scene.shots) {
+        const charIds: string[] = (shot as any).characterIds || [];
+        const urls = charIds
+          .map((cid: string) => charImages[cid])
+          .filter((url: string | undefined): url is string => !!url);
+        if (urls.length > 0) {
+          mapping[shot.id] = urls;
+        }
+      }
+    }
+    return mapping;
+  }, [projectScenes, project]);
+
+  // V3.0: Build characterId -> character name mapping
+  const characterNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const c of characters) {
+      names[c.id] = c.name;
+    }
+    return names;
+  }, [characters]);
+
+  // V3.0: Get character IDs for a shot
+  const getShotCharacterIds = useCallback((shotId: string): string[] => {
+    for (const scene of projectScenes) {
+      for (const shot of scene.shots) {
+        if (shot.id === shotId) {
+          return (shot as any).characterIds || [];
+        }
+      }
+    }
+    return [];
+  }, [projectScenes]);
+
+  const selectedIds = queue.selectedShotIds;
+
+  useEffect(() => {
+    const vidMap: Record<string, string> = {};
+    for (const item of projectItems) {
+      if (item.videoResultUrl) vidMap[item.shotId] = item.videoResultUrl;
+    }
+    setVideoUrls((prev) => {
+      const prevKeys = JSON.stringify(prev);
+      const newKeys = JSON.stringify(vidMap);
+      return prevKeys === newKeys ? prev : vidMap;
+    });
+  }, [projectItems]);
+
+  const getVideoUrl = useCallback((shotId: string): string | undefined => videoUrls[shotId], [videoUrls]);
+
+  const handleGenerateVideo = useCallback(async (shotId: string) => {function ProjectExportPanel({ project, characters, generatedScenes }: { project: any; characters: Character[]; generatedScenes: any[] }) {
+  const { t } = useTranslation();
+  const queue = useProductionQueue();
+  const projectItems = queue.getProjectItems(project.id);
+
+  const buildExport = (format: "json" | "md"): string => {
+    const data: ProjectExport = {
+      version: "2.4",
+      exportedAt: Date.now(),
+      project: { name: project.name, description: project.description, tags: project.tags || [], styleDna: project.styleDna || "" },
+      characters: (project.lockedCharacterIds || []).map((id: string) => {
+        const c = characters.find((ch: Character) => ch.id === id);
+        return c ? { name: c.name, profile: c.profile, dnaBlock: c.dnaBlock, references: c.references || [] } : null;
+      }).filter(Boolean),
+      storyScenes: (project.scenes || generatedScenes || []).map((scene: any) => ({
+        title: scene.title, description: scene.description, cameraAngle: scene.cameraAngle,
+        shots: (scene.shots || []).map((shot: any) => {
+          const qi = projectItems.find((i: any) => i.shotId === shot.id);
+          return { title: shot.title, description: shot.description, prompt: shot.prompt || "", negativePrompt: shot.negativePrompt || "", imageUrl: qi?.imageResultUrl || "", videoUrl: qi?.videoResultUrl || "" };
+        }),
+      })),
+    };
+    if (format === "json") return JSON.stringify(data, null, 2);
+    let md = `# Pipeline Export: ${project.name}\n\n**Exported:** ${new Date(data.exportedAt).toISOString()}\n\n## Characters\n\n`;
+    for (const c of data.characters) md += `- **${c.name}**\n  - DNA: ${c.dnaBlock.slice(0, 100)}...\n`;
+    md += `\n## Scenes\n\n`;
+    for (const s of data.storyScenes) {
+      md += `### ${s.title}\n${s.description}\n\n`;
+      for (const shot of s.shots) md += `- **${shot.title}**\n  - Prompt: ${shot.prompt}\n${shot.imageUrl ? `  - Image: ${shot.imageUrl}\n` : ""}${shot.videoUrl ? `  - Video: ${shot.videoUrl}\n` : ""}`;
+      md += `\n`;
+    }
+    return md;
+  };
+
+  const handleExport = (format: "json" | "md") => {
+    const content = buildExport(format);
+    const ext = format === "json" ? "json" : "md";
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${project.name.replace(/\s+/g, "_")}_pipeline.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Download className="h-5 w-5" />
+          {t("pipeline.exportProject")}
+        </CardTitle>
+        <CardDescription>{t("pipeline.exportDesc")}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleExport("json")}>
+          <FileJson className="h-3.5 w-3.5" /> {t("pipeline.exportJson")}
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleExport("md")}>
+          <FileText className="h-3.5 w-3.5" /> {t("pipeline.exportMarkdown")}
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1.5" disabled>
+          <Archive className="h-3.5 w-3.5" /> {t("pipeline.exportZip")}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LastSavedIndicator() {
+  const { t } = useTranslation();
+  const [savedAt, setSavedAt] = useState(getLastSavedAt());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSavedAt(getLastSavedAt());
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!savedAt) return null;
+  return (
+    <span className="text-[10px] text-muted-foreground ml-2">
+      {t("common.lastSaved") || "锟斤拷蟊４锟?}: {new Date(savedAt).toLocaleTimeString()}
+    </span>
+  );
+}
+
+export default function PipelinePage() {
+  useEffect(() => {
+    startAutoSave();
+    return () => { stopAutoSave(); };
+  }, []);
+  const { t } = useTranslation();
+  const { projects } = useProjectStore();
+  const { characters } = useCharacterStore();
+  const queue = useProductionQueue();
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const leftRef = useRef<HTMLDivElement>(null);
+  const rightRef = useRef<HTMLDivElement>(null);
+
+  const project = projects.find((p) => p.id === selectedProjectId);
+  const stats = selectedProjectId ? queue.getBatchStats(selectedProjectId) : null;
+  const selectedProjectItems = selectedProjectId ? queue.getProjectItems(selectedProjectId) : [];
+  const storageImageUrls = selectedProjectItems.map((item) => item.imageResultUrl).filter(Boolean) as string[];
+  const storageVideoUrls = selectedProjectItems.map((item) => item.videoResultUrl).filter(Boolean) as string[];
+
+  const handleLeftScroll = useCallback(() => {
+    if (leftRef.current && rightRef.current) rightRef.current.scrollTop = leftRef.current.scrollTop;
+  }, []);
+  const handleRightScroll = useCallback(() => {
+    if (rightRef.current && leftRef.current) leftRef.current.scrollTop = rightRef.current.scrollTop;
+  }, []);
+
+  return (
+    <AppShell>
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+              <LayoutDashboard className="h-6 w-6 text-primary" />
+              {t("pipeline.dashboard")}
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">{t("pipeline.dashboardDesc")}</p>
+          <LastSavedIndicator />
+          </div>
+          <ProductionModeToggle mode={queue.productionMode} onChange={(mode) => queue.setProductionMode(mode)} />
+        </div>
+
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <Label className="shrink-0">{t("pipeline.project")}</Label>
+              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder={t("pipeline.selectProject")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {!project && (
+          <div className="text-center py-16 text-muted-foreground">
+            <LayoutDashboard className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <p>{t("pipeline.selectProjectHint")}</p>
+            <p className="text-sm mt-1">{t("pipeline.noProject")}</p>
+          </div>
+        )}
+
+        {project && (
+          <div className="flex flex-col gap-4 lg:flex-row">
+            <div ref={leftRef} onScroll={handleLeftScroll} className="min-w-0 flex-1 space-y-4 lg:max-h-[calc(100vh-280px)] lg:overflow-y-auto lg:pr-1">
+              <StoryboardPreview project={project} characters={characters} />
+              <CharacterImageSection project={project} />
+            </div>
+            <div ref={rightRef} onScroll={handleRightScroll} className="min-w-0 space-y-4 lg:max-h-[calc(100vh-280px)] lg:w-[480px] lg:shrink-0 lg:overflow-y-auto lg:pl-1">
+              {stats && <StatisticsPanel stats={stats} />}
+              <CurrentTasksWidget />
+              <ProductionQueuePanel project={project} characters={characters} />
+              <StorageMonitor projectId={project.id} imageUrls={storageImageUrls} videoUrls={storageVideoUrls} />
+              <ProjectExportPanel project={project} characters={characters} generatedScenes={[]} />
+            </div>
+          </div>
+        )}
+      </div>
+    </AppShell>
+  );
+}
+
+

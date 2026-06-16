@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Agnes SDK - video generation service
 // ============================================================
 // API:
@@ -124,38 +124,34 @@ export function createVideoService(client: AgnesClient) {
     return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
   }
 
-  async function createFromImage(params: ImageToVideoParams): Promise<{
-    taskId: string; videoId: string; numericId: string; syncUrl: string;
-  }> {
+    async function createFromImage(params: ImageToVideoParams): Promise<{ taskId: string; videoId: string; numericId: string; syncUrl: string; }> {
     const config = client.getConfig();
-    const rawSize = params.image.size || 0;
-    console.debug("[Agnes SDK] Image-to-video source size", (rawSize / 1024).toFixed(1), "KB");
-    let processBlob: Blob;
-    if (rawSize > 5 * 1024 * 1024) {
-      console.debug("[Agnes SDK] Compressing image to 1536px max, 85% quality");
-      processBlob = await compressImageForUpload(params.image, 1536, 0.85);
-      console.debug("[Agnes SDK] Compressed size", (processBlob.size / 1024).toFixed(1), "KB");
-    } else {
-      processBlob = params.image;
-    }
-    const dataUri = await fileToDataUri(processBlob);
-    const rawBase64 = dataUri.replace(/^data:image\/\w+;base64,/, "");
+    const model = params.model || config.imageToVideoModel || config.model;
+    // API accepts JSON with image URL(s), NOT FormData or base64
     const payload: Record<string, unknown> = {
-      model: params.model || config.imageToVideoModel || config.model,
-      prompt: params.prompt ?? "",
-      image: rawBase64,
-      height: params.height ?? 768,
-      width: params.width ?? 1152,
+      model,
+      prompt: params.prompt || "",
       num_frames: params.numFrames ?? 121,
       frame_rate: params.frameRate ?? 24,
     };
-    const payloadSize = JSON.stringify(payload).length;
-    console.debug("[Agnes SDK] Image-to-video POST payload size:", (payloadSize / 1024).toFixed(1), "KB");
+    if (params.height) payload.height = params.height;
+    if (params.width) payload.width = params.width;
+    if (params.negativePrompt) payload.negative_prompt = params.negativePrompt;
+    if (params.seed) payload.seed = params.seed;
+    if (params.image) {
+      if (Array.isArray(params.image)) {
+        // Multi-image: pass as extra_body.image array
+        payload.extra_body = { image: params.image };
+      } else {
+        // Single image: pass as image URL string
+        payload.image = params.image;
+      }
+    }
+    console.debug("[Agnes SDK] POST /videos (image):", JSON.stringify({ ...payload, image: payload.image ? "(set)" : undefined, extra_body: payload.extra_body ? "(set)" : undefined }).slice(0, 400));
     const res = await client.post<unknown>("/videos", payload);
-    console.debug("[Agnes SDK] POST /videos image-to-video response:", JSON.stringify(res).slice(0, 800));
+    console.debug("[Agnes SDK] POST /videos (image) response:", JSON.stringify(res).slice(0, 600));
     const { taskId, videoId } = extractVideoTaskIds(res);
     if (!taskId) throw new Error("Failed to create image-to-video task: " + JSON.stringify(res).slice(0, 300));
-    console.debug("[Agnes SDK] Image-to-video result - taskId:", taskId, "videoId:", videoId);
     return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
   }
 
@@ -311,3 +307,4 @@ function mapStatus(raw: string): TaskStatus {
   if (["processing", "running", "in_progress", "inprogress", "active", "pending", "not_start", "not_started"].includes(s)) return "processing";
   return "queued";
 }
+

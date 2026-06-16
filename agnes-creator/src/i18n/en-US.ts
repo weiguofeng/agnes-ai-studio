@@ -487,7 +487,9 @@ const en: Translations = {
   "pipeline.customDuration": "Custom",
   "pipeline.durationSeconds": "seconds",
   "pipeline.multiImage": "Multi-Character Images",
-  "pipeline.multiImageDesc": "This shot has multiple characters. Their reference images will be combined for video generation.",
+  "pipeline.multiImageDesc": "This shot has multiple characters. Their reference images will be combined for video generation.",
+  "pipeline.charImagesInQueue": "Character Images",
+  "pipeline.clickToExpandPrompt": "Click to expand & edit",
 
 
 
@@ -527,3 +529,4 @@ const en: Translations = {
 
 };
 export default en;
+

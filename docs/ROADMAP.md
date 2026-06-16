@@ -61,44 +61,60 @@
 
 ### Pipeline UX & Recovery Hardening
 
-- Image-to-video task flow requires real video URL before completion
-- zh-CN / en-US copy completed for homepage, recovery center, cleanup confirmation, and video error states
-- StorageMonitor safe cleanup UI completed
-- AppShell / Sidebar / Pipeline responsive layout improved
-- QueueCardView image/video lock, unlock, and delete actions completed
-- PromptInlineEditor empty-history selector crash fixed
-- PromptPack generation supports legacy shot data
-- Scene and shot IDs stay consistent during pipeline generation
-- Production queue batch image generation fixed
-- Production queue batch image-to-video fixed
-- Production queue prompt completeness fixed
-- Agnes video polling prefers `video_id`
-- Batch pause / terminate cancels local polling and live task status
-- Storage monitor project-level statistics fixed
-- Project story script recovery fixed
-- StorageService remote asset persistence now falls back to the server download proxy when direct browser fetch fails
-- Timeline import creates a project-scoped editor timeline when no active timeline exists
-- Timeline import reuses only timelines belonging to the selected project
-- Timeline import localizes remote video/image URLs into playable Blob URLs before adding clips
-- Editor video playback no longer requires CORS by default for ordinary video preview
-- Agnes video polling handles 429 / rate-limit responses with stronger backoff instead of failing the task
-- Closed-loop QA scripts, test plan, report template, and regression coverage added for story-to-export quality gates
-- Pending image-to-video queue candidates now require a completed image and real image URL
-- Lint gate migrated from deprecated `next lint` to ESLint CLI for source files
-- ESLint JSON report script added for warning baseline tracking
-- Next build lint phase disabled so build and lint gates stay separate
+- Full zh-CN / en-US copy coverage
+- StorageMonitor safe cleanup UI
+- QueueCardView lock/unlock/delete actions
+- PromptInlineEditor crash fixes
+- Production queue batch operations fixed
+- Agnes polling 429/rate-limit backoff
+- Closed-loop QA scripts and regression tests
+- ESLint CLI migration
 
 ---
 
-
-## V2.9 (In Progress)
+## V2.9 (Completed)
 
 ### Production Pipeline Enhancement
 
-- Multi-character image compositing for image-to-video generation
+- Multi-character image compositing for video generation
 - Video duration control (3s/5s/8s/10s/18s/custom) per shot
 - Pipeline left panel refactored to StoryboardPreview + CharacterImageSection
-- Removed old StoryboardGenerator and CharacterDnaPanel
-- New imageCompositor utility for multi-image compositing
+- Removed old AI Story Studio and Storyboard Design menus
 
+---
 
+## V3.0 (Completed)
+
+### Pipeline Queue Refactoring
+
+- Removed image generation from production queue (queue focuses only on video)
+- Queue card shows character image thumbnails instead of image preview
+- Truncated prompt display with expand/edit
+- BatchOperations: removed image batch button
+- Fixed CORS: character images served via server proxy before compositing
+- Fixed API: createFromImage now uses JSON POST with image URL(s), NOT FormData
+- Fixed polling rate limits: PollRateLimiter, jitter, stagger, 429 backoff
+- Fixed useCallback stale closure: project in dependency array
+- Fixed postForm missing boundary: removed manual Content-Type
+
+---
+
+## Future Plans
+
+### V3.1
+
+- Storyboard detail page improvements
+- Character image gallery in pipeline
+- Queue reorder and drag-and-drop
+
+### V3.2
+
+- Multi-model support for video generation
+- Batch duration override
+- Export queue as timeline presets
+
+### V3.3
+
+- Cloud task scheduling
+- Multi-project queue
+- One-click full project generation
