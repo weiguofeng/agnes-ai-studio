@@ -1,8 +1,8 @@
-# Agnes AI Studio
+﻿# Agnes AI Studio
 
 ## Current Version
 
-V2.8.1
+V2.9
 
 ---
 
@@ -30,17 +30,21 @@ Story -> Storyboard -> Prompt -> Image -> Image-to-Video -> Assets Library -> Vi
 - Production Pipeline
 - V2.7 Production Dashboard
 - V2.8 Production Hardening
-- V2.8.1 Pipeline UX & Recovery Hardening
-- V2.8.1 Pipeline Prompt Crash Fix
-- V2.8.1 Production Queue Batch Image Fix
-- V2.8.1 Production Queue Video Task Fix
-- V2.8.1 Production Queue Control & Storage Fix
-- V2.8.1 Storage Proxy Fallback Fix
-- V2.8.1 Timeline Import Recovery Fix
-- V2.8.1 Agnes Polling Rate-Limit Backoff Fix
-- V2.8.1 Closed-Loop QA Gate
-- V2.8.1 Timeline Playback Import Fix
-- V2.8.1 Dev Startup Recovery Fix
+- V2.9 Pipeline UX & Recovery Hardening
+- V2.9 Pipeline Prompt Crash Fix
+- V2.9 Production Queue Batch Image Fix
+- V2.9 Production Queue Video Task Fix
+- V2.9 Production Queue Control & Storage Fix
+- V2.9 Storage Proxy Fallback Fix
+- V2.9 Timeline Import Recovery Fix
+- V2.9 Agnes Polling Rate-Limit Backoff Fix
+- V2.9 Closed-Loop QA Gate
+- V2.9 Timeline Playback Import Fix
+- V2.9 Dev Startup Recovery Fix
+- V2.9 Multi-Character Image Compositing
+- V2.9 Video Duration Control
+- V2.9 ProductionQueueItem videoDurationFrames
+- V2.9 StoryboardPreview & CharacterImageSection Pipeline Refactor
 
 ---
 
@@ -65,20 +69,17 @@ Story -> Storyboard -> Prompt -> Image -> Image-to-Video -> Assets Library -> Vi
 
 ## Current Development Focus
 
-V2.8.1 Pipeline UX & Recovery Hardening now includes the storage proxy fallback, timeline import recovery, Agnes polling rate-limit backoff, closed-loop QA gate, and timeline playback import hardening for the story-to-export workflow.
+V2.9 adds multi-character image compositing (see details below) and video duration control to the production pipeline.
 
-Storage persistence falls back to the server download proxy when direct browser fetch of remote Agnes/CDN URLs fails because of CORS, URL policy, or signed URL access behavior. Timeline import now creates or reuses a project-scoped editor timeline for the selected project instead of importing into another active project's timeline. Before writing video clips to the editor timeline, the pipeline localizes remote Agnes/CDN image and video URLs into playable Blob URLs via the asset store when possible, while preserving the original remote URLs in clip metadata.
+Multi-character compositing: When a shot scene involves multiple characters, their generated reference images are automatically composited into a single image (horizontal layout) before being sent to the image-to-video API. This ensures visual consistency across all characters in the generated video. The compositing is handled by `src/lib/imageCompositor.ts`.
 
-Agnes video polling detects 429 / rate-limit responses and backs off more aggressively while keeping the image-to-video task active. The production queue only returns pending image-to-video candidates when image generation is completed and a real image URL exists.
+Video duration control: Each shot card in the production queue now has a duration selector with presets (3s/5s/8s/10s/18s) and custom input (1-30s). The selected duration is converted to `numFrames` (at 24fps) and passed directly to the Agnes Video V2.0 API. The per-shot duration is persisted in the production queue store via the `videoDurationFrames` field.
 
-Closed-loop QA now separates build and lint responsibilities: Next build compiles and generates types, while ESLint CLI enforces source linting and can write a JSON warning baseline.
-
-The dev server startup path was also hardened after a syntax break in task rendering components prevented `next dev` from staying reachable.
-
----
-
+The old storyboard generator (text-to-storyboard AI) and CharacterDnaPanel have been removed from the pipeline page. The left panel now shows StoryboardPreview (reads from project scenes) and CharacterImageSection (generates character reference images). The sidebar no longer includes AI Story Studio and Storyboard Design menu items.
 ## Known Issues
 
 1. Agnes service responses can still include 500 errors or remote task lookup failures. The client must keep image-to-video as the main workflow and use retry/recovery/pause rather than text-to-video fallback.
 2. Historical ESLint warnings still need cleanup in V2.9.
 3. `eslint src` still reports existing warnings unrelated to this startup fix.
+
+

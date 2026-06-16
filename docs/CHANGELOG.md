@@ -1,3 +1,33 @@
+﻿## 2026-06-16
+
+### Added
+
+- Multi-character image compositing: When a shot involves multiple characters, all reference images are composited horizontally into one image before video generation.
+- Video duration control: Each shot card now has a duration selector (3s/5s/8s/10s/18s/custom) that maps to numFrames in the Agnes Video V2.0 API.
+- ProductionQueueItem.videoDurationFrames field for per-shot duration persistence.
+- VideoDurationSelector component with preset and custom duration input.
+- imageCompositor.ts utility with compositeImages() function and VIDEO_DURATION_PRESETS constants.
+- 12 new i18n keys (6 zh-CN + 6 en-US) for video duration and multi-image UI.
+
+### Changed
+
+- Pipeline left panel: replaced old StoryboardGenerator (text-to-storyboard AI) with StoryboardPreview (reads project scenes) and CharacterImageSection (generates character reference images).
+- handleGenerateVideo now supports multi-character compositing and passes 
+umFrames parameter.
+- QueueCardView shows duration selector and multi-character badge per shot card.
+
+### Removed
+
+- Old StoryboardGenerator component (story-to-storyboard AI) and CharacterDnaPanel.
+- Unused imports: parseStoryToScenes, BookTemplate, Textarea.
+
+### Verification
+
+- 
+pm run typecheck — 0 errors.
+- 
+pm run build — Compiled successfully.
+
 # Changelog
 
 ## 2026-06-16
@@ -104,3 +134,4 @@
 - TypeScript passed.
 - Lint passed with existing warnings.
 - Build passed with existing warnings.
+

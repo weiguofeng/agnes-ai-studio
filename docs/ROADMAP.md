@@ -1,4 +1,4 @@
-# Agnes AI Studio Roadmap
+﻿# Agnes AI Studio Roadmap
 
 ## V2.4 (Completed)
 
@@ -90,32 +90,15 @@
 
 ---
 
-## V2.9
 
-### Quality Gate Cleanup
+## V2.9 (In Progress)
 
-- Clean historical ESLint warnings and enforce warning baseline tracking
-- Add i18n key annotation and hardcoded UI string scanning
-- Add mock E2E coverage for image-to-video create -> poll -> complete
-- Add Playwright mobile checks for no horizontal overflow
-- Add Playwright regression for production pipeline story generation and queue rendering
-- Add Agnes 404 / task-not-found end-to-end recovery checks
-- Add full browser regression for timeline import into a newly created editor timeline
-- Automate closed-loop report generation from local QA command output
-- Document dev startup recovery and related accessibility verification
+### Production Pipeline Enhancement
 
----
+- Multi-character image compositing for image-to-video generation
+- Video duration control (3s/5s/8s/10s/18s/custom) per shot
+- Pipeline left panel refactored to StoryboardPreview + CharacterImageSection
+- Removed old StoryboardGenerator and CharacterDnaPanel
+- New imageCompositor utility for multi-image compositing
 
-## V3.0
 
-### Story To Final Video
-
-Target: input story -> automatically generate characters, storyboard, prompts, images, videos, subtitles, cover, and final video.
-
-Key areas:
-
-- AI subtitle generation
-- Cloud task scheduling
-- Multi-project queue
-- Service Worker cache
-- Asset deduplication
