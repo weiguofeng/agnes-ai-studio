@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,15 +30,16 @@ import type { Scene, Shot, Character, PromptPack, ProjectExport, ShotType } from
 import { startAutoSave, stopAutoSave, getLastSavedAt, markDirty } from "@/services/ProjectAutoSaveService";
 import { usePromptHistoryStore } from "@/stores/promptHistoryStore";
 import { useTaskStore } from "@/stores/taskStore";
+import { useAssetStore } from "@/stores/assetStore";
 import { StoryboardPreview } from "@/components/pipeline/StoryboardPreview";
 import { CharacterImageSection } from "@/components/pipeline/CharacterImageSection";
 import { compositeImages } from "@/lib/imageCompositor";
 import { StatisticsPanel } from "@/components/pipeline/StatisticsPanel";
 import { QueueCardView } from "@/components/pipeline/QueueCardView";
 import { BatchOperations } from "@/components/pipeline/BatchOperations";
-import { TimelineImport } from "@/components/pipeline/TimelineImport";
+
 import { StorageMonitor } from "@/components/pipeline/StorageMonitor";
-import { ProductionModeToggle } from "@/components/pipeline/ProductionModeToggle";
+
 import { CurrentTasksWidget } from "@/components/pipeline/CurrentTasksWidget";
 import { VideoDurationSelector } from "@/components/pipeline/VideoDurationSelector";
 
@@ -163,7 +164,19 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
         useTaskStore.getState().updateTask(localTaskId, { status: 'completed', progress: 100, resultUrl: videoResult.url });
         markDirty();
         setVideoUrls(function(prev) { var o: Record<string, string> = {}; for (var k in prev) o[k] = prev[k]; o[shotId] = videoResult.url; return o; });
-        try { await StorageService.saveAssetFromUrl({ url: videoResult.url, type: 'video', projectId: project.id, shotId }); } catch (e) {}
+        try { await StorageService.saveAssetFromUrl({ url: videoResult.url, type: 'video', projectId: project.id, shotId }); } catch (e) { logger.warn('Pipeline', 'Failed to save video to asset library', { error: e instanceof Error ? e.message : String(e) }); }
+      // Sync to /assets page store
+      try {
+        useAssetStore.getState().addAsset({
+          name: (shotData?.title || shotData?.shotTitle || 'Shot') + ' - ' + new Date().toLocaleTimeString(),
+          url: videoResult.url,
+          type: 'video',
+          tags: ['video', shotScene?.title || '', shotData?.title || ''],
+          category: 'output',
+          isFavorite: false,
+          projectId: project.id,
+        });
+      } catch (e) {}
       } else { queue.updateVideoStatus(shotId, 'failed', undefined, undefined, t('pipeline.noVideoTaskCreated')); useTaskStore.getState().updateTask(localTaskId, { status: 'failed', errorMessage: t('pipeline.noVideoTaskCreated') }); }
     } catch (err) {
       if (abortController.signal.aborted) { queue.updateVideoStatus(shotId, 'cancelled', undefined, undefined, t('pipeline.taskCancelled')); if (localTaskId) useTaskStore.getState().updateTask(localTaskId, { status: 'cancelled', errorMessage: t('pipeline.taskCancelled') }); return; }
@@ -171,7 +184,7 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
       queue.updateVideoStatus(shotId, 'failed', undefined, undefined, classified.type + ': ' + classified.userMessage);
       if (localTaskId) useTaskStore.getState().updateTask(localTaskId, { status: 'failed', errorMessage: classified.type + ': ' + classified.userMessage });
     } finally { videoAbortControllers.current.delete(shotId); setProcessingVideos(function(prev) { var n = new Set(prev); n.delete(shotId); return n; }); }
-  }, [processingVideos, projectItems, queue, config.imageToVideoModel, project.id, getVideoPrompt, t, projectScenes]);
+  }, [processingVideos, projectItems, queue, config.imageToVideoModel, project, getVideoPrompt, t, projectScenes]);
 
   const handleSavePrompt = useCallback((shotId: string, prompt: string) => {
     queue.updatePrompt(shotId, prompt);
@@ -198,7 +211,7 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
     return charIds.some((cid: string) => charImages[cid]);
   }, [projectItems, projectScenes, project]);
 
-  const handleBatchGenerateVideos = useCallback(() => {
+  const handleBatchGenerateVideos = useCallback(async () => {
     const runnableIds = selectedIds.filter((sid) => {
       const item = projectItems.find((i) => i.shotId === sid);
       if (!item || item.videoLocked) return false;
@@ -208,7 +221,12 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
       }
       return true;
     });
-    for (const sid of runnableIds) handleGenerateVideo(sid);
+    let delay = 0;
+    for (const sid of runnableIds) {
+      if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+      handleGenerateVideo(sid);
+      delay = 6000; // 6s stagger between each task
+    }
     queue.deselectAllShots();
   }, [selectedIds, projectItems, handleGenerateVideo, queue, t, hasVideoSourceImage]);
   const handleBatchPause = useCallback(() => {
@@ -228,83 +246,7 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
   const handleBatchDelete = useCallback(() => { queue.batchDelete(selectedIds); queue.deselectAllShots(); }, [selectedIds, queue]);
   const handleBatchLock = useCallback(() => { queue.batchLock(selectedIds); queue.deselectAllShots(); }, [selectedIds, queue]);
 
-  const handleBatchImportTimeline = useCallback(() => {
-    const timelineId = editorStore.activeTimelineId;
-    if (!timelineId) return;
-    for (const sid of selectedIds) {
-      const item = projectItems.find((i) => i.shotId === sid);
-      if (item?.videoResultUrl) {
-        editorStore.addClip(timelineId, {
-          timelineId, source: { type: "shot", id: sid }, type: "video",
-          title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
-          src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
-        });
-      }
-    }
-    queue.deselectAllShots();
-  }, [selectedIds, projectItems, editorStore, queue]);
-
-  const handleImportAll = useCallback(() => {
-    const timelineId = editorStore.activeTimelineId;
-    if (!timelineId) return;
-    for (const item of projectItems) {
-      if (item.videoResultUrl) {
-        editorStore.addClip(timelineId, {
-          timelineId, source: { type: "shot", id: item.shotId }, type: "video",
-          title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
-          src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
-        });
-      }
-    }
-  }, [projectItems, editorStore]);
-
-  const handleImportLocked = useCallback(() => {
-    const timelineId = editorStore.activeTimelineId;
-    if (!timelineId) return;
-    for (const item of projectItems) {
-      if (item.videoResultUrl && item.videoLocked) {
-        editorStore.addClip(timelineId, {
-          timelineId, source: { type: "shot", id: item.shotId }, type: "video",
-          title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
-          src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
-        });
-      }
-    }
-  }, [projectItems, editorStore]);
-
-  const handleImportScene = useCallback((sceneId: string) => {
-    const timelineId = editorStore.activeTimelineId;
-    if (!timelineId) return;
-    for (const item of projectItems) {
-      if (item.sceneId === sceneId && item.videoResultUrl) {
-        editorStore.addClip(timelineId, {
-          timelineId, source: { type: "shot", id: item.shotId }, type: "video",
-          title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
-          src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
-        });
-      }
-    }
-  }, [projectItems, editorStore]);
-
-  const handleImportShot = useCallback((shotId: string) => {
-    const timelineId = editorStore.activeTimelineId;
-    if (!timelineId) return;
-    const item = projectItems.find((i) => i.shotId === shotId);
-    if (item?.videoResultUrl) {
-      editorStore.addClip(timelineId, {
-        timelineId, source: { type: "shot", id: item.shotId }, type: "video",
-        title: item.shotTitle || `Shot ${item.shotOrder}`, startTime: 0, endTime: 5, duration: 5,
-        src: item.videoResultUrl, thumbnailUrl: item.imageResultUrl, properties: {},
-      });
-    }
-  }, [projectItems, editorStore]);
-
-  const videoCount = projectItems.filter((i) => i.videoResultUrl).length;
-  const lockedCount = projectItems.filter((i) => i.videoLocked).length;
-  const sceneIds = [...new Set(projectItems.map((i) => i.sceneId))];
-  const shotIds = projectItems.filter((i) => i.videoResultUrl).map((i) => i.shotId);
-
-  if (projectItems.length === 0) {
+if (projectItems.length === 0) {
     return (
       <Card>
         <CardHeader className="pb-3">
@@ -350,7 +292,6 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
             onBatchResume={handleBatchResume}
             onBatchDelete={handleBatchDelete}
             onBatchLock={handleBatchLock}
-            onBatchImportTimeline={handleBatchImportTimeline}
           />
           <Separator />
           <QueueCardView
@@ -371,22 +312,9 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
           />
         </CardContent>
       </Card>
-      <TimelineImport
-        videoCount={videoCount}
-        lockedCount={lockedCount}
-        selectedCount={selectedIds.length}
-        onImportAll={handleImportAll}
-        onImportSelected={handleBatchImportTimeline}
-        onImportLocked={handleImportLocked}
-        onImportScene={handleImportScene}
-        onImportShot={handleImportShot}
-        sceneIds={sceneIds}
-        shotIds={shotIds}
-      />
     </div>
   );
 }
-
 
 function ProjectExportPanel({ project, characters, generatedScenes }: { project: any; characters: Character[]; generatedScenes: any[] }) {
   const { t } = useTranslation();
@@ -515,7 +443,6 @@ export default function PipelinePage() {
             <p className="text-muted-foreground mt-1 text-sm">{t("pipeline.dashboardDesc")}</p>
           <LastSavedIndicator />
           </div>
-          <ProductionModeToggle mode={queue.productionMode} onChange={(mode) => queue.setProductionMode(mode)} />
         </div>
 
         <Card>
@@ -561,14 +488,6 @@ export default function PipelinePage() {
     </AppShell>
   );
 }
-
-
-
-
-
-
-
-
 
 
 

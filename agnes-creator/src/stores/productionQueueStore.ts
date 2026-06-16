@@ -1,4 +1,4 @@
-﻿import { create } from "zustand";
+import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { indexedDBStorage } from "@/services/IndexedDBStorage";
 import type { ProductionQueueItem, ProductionStatus } from "@/types";
@@ -62,7 +62,7 @@ interface ProductionQueueState {
   batchLock: (shotIds: string[]) => void;
   getBatchStats: (projectId: string) => {
     totalShots: number; totalScenes: number;
-    imagesCompleted: number; videosCompleted: number;
+    videosCompleted: number;
     failedCount: number; pendingCount: number;
     successRate: number; avgDuration: number;
     estimatedRemaining: number;
@@ -374,25 +374,33 @@ export const useProductionQueue = create<ProductionQueueState>()(
         const items = get().items.filter((i) => i.projectId === projectId);
         const totalShots = items.length;
         const totalScenes = new Set(items.map(i => i.sceneId)).size;
-        const imagesCompleted = items.filter(i => i.imageStatus === "completed").length;
         const videosCompleted = items.filter(i => i.videoStatus === "completed").length;
-        const failedCount = items.filter(i => i.imageStatus === "failed" || i.videoStatus === "failed").length;
-        const pendingCount = items.filter(i => i.imageStatus === "pending" || i.videoStatus === "pending").length;
+        const failedCount = items.filter(i => i.videoStatus === "failed").length;
+        const generatingCount = items.filter(i => i.videoStatus === "generating" || i.videoStatus === "regenerating_video").length;
+        const pendingCount = items.filter(i => i.videoStatus === "pending").length;
+        const waitingCount = items.filter(i => i.videoStatus !== "completed" && i.videoStatus !== "failed" && i.videoStatus !== "pending").length;
         const successRate = totalShots > 0 ? Math.round((videosCompleted / totalShots) * 100) : 0;
 
-        // Calculate average duration from completed items
-        const completedItems = items.filter(i => i.imageCompletedAt && i.imageStartedAt);
-        const avgDuration = completedItems.length > 0
-          ? Math.round(completedItems.reduce((sum, i) => sum + (i.imageCompletedAt! - i.imageStartedAt!), 0) / completedItems.length / 1000)
+        // Calculate average video duration from completed items (in minutes)
+        const completedVideos = items.filter(i => i.videoCompletedAt && i.videoStartedAt);
+        const avgDurationMs = completedVideos.length > 0
+          ? completedVideos.reduce((sum, i) => sum + (i.videoCompletedAt! - i.videoStartedAt!), 0) / completedVideos.length
           : 0;
+        // Round to nearest minute, minimum 1
+        const avgDurationMinutes = avgDurationMs > 0 ? Math.max(1, Math.round(avgDurationMs / 60000)) : 0;
 
-        // Estimated remaining time
-        const remainingItems = items.filter(i => i.videoStatus !== "completed" && i.videoStatus !== "failed");
-        const estimatedRemaining = avgDuration > 0 ? Math.round((remainingItems.length * avgDuration) / 60) : 0;
+        // Estimated remaining time: ~2 min per 5-second video as baseline
+        const estimatedRemaining = !videosCompleted && !generatingCount
+          ? 0
+          : Math.max(0, (totalShots - videosCompleted) * 2);
 
         return {
-          totalShots, totalScenes, imagesCompleted, videosCompleted,
-          failedCount, pendingCount, successRate, avgDuration, estimatedRemaining,
+          totalShots, totalScenes,
+          videosCompleted,
+          failedCount, pendingCount,
+          successRate,
+          avgDuration: avgDurationMinutes,
+          estimatedRemaining,
         };
       },
     }),

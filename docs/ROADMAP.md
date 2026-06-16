@@ -1,4 +1,4 @@
-﻿# Agnes AI Studio Roadmap
+# Agnes AI Studio Roadmap
 
 ## V2.4 (Completed)
 
@@ -57,7 +57,7 @@
 
 ---
 
-## V2.8.1 (Completed)
+## V2.9 (Completed)
 
 ### Pipeline UX & Recovery Hardening
 
@@ -68,18 +68,6 @@
 - Production queue batch operations fixed
 - Agnes polling 429/rate-limit backoff
 - Closed-loop QA scripts and regression tests
-- ESLint CLI migration
-
----
-
-## V2.9 (Completed)
-
-### Production Pipeline Enhancement
-
-- Multi-character image compositing for video generation
-- Video duration control (3s/5s/8s/10s/18s/custom) per shot
-- Pipeline left panel refactored to StoryboardPreview + CharacterImageSection
-- Removed old AI Story Studio and Storyboard Design menus
 
 ---
 
@@ -87,34 +75,53 @@
 
 ### Pipeline Queue Refactoring
 
-- Removed image generation from production queue (queue focuses only on video)
-- Queue card shows character image thumbnails instead of image preview
-- Truncated prompt display with expand/edit
-- BatchOperations: removed image batch button
-- Fixed CORS: character images served via server proxy before compositing
-- Fixed API: createFromImage now uses JSON POST with image URL(s), NOT FormData
-- Fixed polling rate limits: PollRateLimiter, jitter, stagger, 429 backoff
-- Fixed useCallback stale closure: project in dependency array
-- Fixed postForm missing boundary: removed manual Content-Type
+- Removed image generation from production queue
+- Multi-character image compositing for video generation
+- Video duration control (3s/5s/8s/10s/18s/custom)
+- Fixed CORS: server proxy for image/video download
+- Fixed API: JSON POST with image URLs (not FormData)
+- Fixed polling rate limits: PollRateLimiter + jitter + stagger
+- Fixed useCallback stale closure
+- Fixed postForm Content-Type boundary
+- Removed old AI Story Studio and Storyboard Design menus
+- Fixed video duration presets (valid num_frames %8==1)
+
+---
+
+## V3.1 (Current)
+
+### Pipeline Statistics & UI Optimization
+
+- **StatisticsPanel**: Removed imagesCompleted stat, fixed avgDuration (minutes), fixed estimatedRemaining (2 min/video)
+- **CurrentTasksWidget**: Filtered to pipeline-only tasks, added animated progress bars, auto-hide on completion
+- **TimelineImport**: Deleted component + all related logic + BatchOperations import button
+- **ProductionModeToggle**: Removed from page header
+- **Rate limiting**: Mutex-based PollRateLimiter, sliding window (3/20s), increased intervals (12s query, 15s poll)
+- **Asset library sync**: Pipeline saves (character images + videos) auto-synced to useAssetStore for /assets page
+- **Asset library enhancement**: Time sorting, date range filtering, project tag filtering, cascade delete
+- **Character images**: Auto-save to StorageService + sync to useAssetStore on generation
+- **Video save**: Error logging added (no longer silent catch), dual write to StorageService + useAssetStore
 
 ---
 
 ## Future Plans
 
-### V3.1
-
-- Storyboard detail page improvements
-- Character image gallery in pipeline
-- Queue reorder and drag-and-drop
-
 ### V3.2
 
 - Multi-model support for video generation
-- Batch duration override
-- Export queue as timeline presets
+- Queue reorder and drag-and-drop
+- Character image gallery in pipeline
+- Storyboard detail page improvements
 
 ### V3.3
 
 - Cloud task scheduling
 - Multi-project queue
 - One-click full project generation
+- Export queue as timeline presets
+
+### V3.4
+
+- Subtitle auto-generation
+- Cover auto-generation
+- Batch project production across multiple projects

@@ -64,6 +64,9 @@ export const StorageService = {
       let blob: Blob;
       if (params.url.startsWith("data:")) {
         blob = dataUrlToBlob(params.url);
+      } else if (params.type === "video") {
+        // Video CDNs almost never have CORS headers - always use proxy
+        blob = await proxyUrlToBlob(params.url);
       } else {
         try {
           blob = await urlToBlob(params.url);
@@ -180,6 +183,25 @@ export const StorageService = {
       const msg = err instanceof Error ? err.message : String(err);
       return { success: false, error: msg };
     }
+  },
+
+  async refreshAssetUrl(asset: AssetRecord): Promise<AssetRecord> {
+    // Blob URLs expire after page refresh - recreate from stored blob
+    if (asset.url && asset.url.startsWith("blob:")) {
+      try {
+        const blob = await AssetsDB.load(
+          asset.type === "video" ? "videos" : asset.type === "thumbnail" ? "thumbnails" : "images",
+          asset.id
+        );
+        if (blob) {
+          URL.revokeObjectURL(asset.url); // clean up old URL
+          return { ...asset, url: URL.createObjectURL(blob) };
+        }
+      } catch {
+        // fallback to original URL
+      }
+    }
+    return asset;
   },
 
   async listAssets(): Promise<AssetRecord[]> {

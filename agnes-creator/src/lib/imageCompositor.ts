@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Image compositing utility for multi-character video generation.
  * When a shot has multiple characters, composite their reference images
  * into a single image to pass to the image-to-video API.
@@ -90,11 +90,10 @@ export async function compositeImages(
  * Maps label -> { seconds, frames } (at 24fps)
  */
 export const VIDEO_DURATION_PRESETS = [
-  { label: '3s', seconds: 3, frames: 72 },
-  { label: '5s', seconds: 5, frames: 121 },  // default
-  { label: '8s', seconds: 8, frames: 192 },
-  { label: '10s', seconds: 10, frames: 240 },
-  { label: '18s', seconds: 18, frames: 432 },
+  { label: '3s', seconds: 3, frames: 81 },   // 81%8=1, ~3.38s @24fps
+  { label: '5s', seconds: 5, frames: 121 },  // 121%8=1, ~5.04s @24fps (default)
+  { label: '10s', seconds: 10, frames: 241 }, // 241%8=1, ~10.04s @24fps
+  { label: '18s', seconds: 18, frames: 441 }, // 441%8=1, ~18.38s @24fps
 ] as { label: string; seconds: number; frames: number }[];
 
 export const DEFAULT_DURATION_FRAMES = 121; // ~5 seconds at 24fps
@@ -103,7 +102,11 @@ export const DEFAULT_DURATION_FRAMES = 121; // ~5 seconds at 24fps
  * Calculate numFrames from seconds.
  */
 export function secondsToFrames(seconds: number, frameRate = 24): number {
-  return Math.round(seconds * frameRate);
+  // API requires: num_frames >= 49 && num_frames % 8 == 1
+  // Find the nearest valid frame count
+  const raw = Math.round(seconds * frameRate);
+  const result = Math.round((raw - 1) / 8) * 8 + 1;
+  return Math.max(49, result);
 }
 
 /**

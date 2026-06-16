@@ -1,12 +1,12 @@
-﻿"use client";
+"use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/i18n";
-import { BarChart3, Camera, Image, Video, AlertTriangle, Clock, Timer, TrendingUp } from "lucide-react";
+import { BarChart3, Camera, Video, AlertTriangle, Clock, Timer, TrendingUp } from "lucide-react";
 
 interface StatsData {
   totalShots: number;
   totalScenes: number;
-  imagesCompleted: number;
+
   videosCompleted: number;
   failedCount: number;
   pendingCount: number;
@@ -21,12 +21,12 @@ export function StatisticsPanel({ stats }: { stats: StatsData }) {
   const items = [
     { label: t("pipeline.totalShots"), value: stats.totalShots, icon: Camera, color: "text-blue-500" },
     { label: t("pipeline.totalScenes"), value: stats.totalScenes, icon: BarChart3, color: "text-indigo-500" },
-    { label: t("pipeline.imagesCompleted"), value: stats.imagesCompleted, icon: Image, color: "text-green-500" },
+
     { label: t("pipeline.videosCompleted"), value: stats.videosCompleted, icon: Video, color: "text-emerald-500" },
     { label: t("pipeline.failedCount"), value: stats.failedCount, icon: AlertTriangle, color: "text-red-500" },
     { label: t("pipeline.pendingCount"), value: stats.pendingCount, icon: Clock, color: "text-yellow-500" },
     { label: t("pipeline.successRate"), value: `${stats.successRate}%`, icon: TrendingUp, color: "text-purple-500" },
-    { label: t("pipeline.avgDuration"), value: `${stats.avgDuration}${t("pipeline.seconds")}`, icon: Timer, color: "text-cyan-500" },
+    { label: t("pipeline.avgDuration"), value: `${stats.avgDuration}${t("pipeline.minutes")}`, icon: Timer, color: "text-cyan-500" },
     { label: t("pipeline.estimatedRemaining"), value: `${stats.estimatedRemaining}${t("pipeline.minutes")}`, icon: Clock, color: "text-orange-500" },
   ];
 

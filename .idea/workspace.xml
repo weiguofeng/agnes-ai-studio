@@ -6,16 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="9ac478b8-d13b-4e68-924d-7da1cc524719" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/agnes-creator/src/app/pipeline/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/app/pipeline/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agnes-creator/src/components/pipeline/BatchOperations.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/components/pipeline/BatchOperations.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agnes-creator/src/components/pipeline/PromptInlineEditor.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/components/pipeline/PromptInlineEditor.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agnes-creator/src/components/pipeline/QueueCardView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/components/pipeline/QueueCardView.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agnes-creator/src/i18n/en-US.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/i18n/en-US.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agnes-creator/src/i18n/zh-CN.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/i18n/zh-CN.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agnes-creator/src/services/agnes/client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/services/agnes/client.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agnes-creator/src/services/agnes/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/services/agnes/types.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agnes-creator/src/services/agnes/video.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/services/agnes/video.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/CHANGELOG.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/PROJECT_CONTEXT.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/PROJECT_CONTEXT.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -79,7 +70,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1781573044451</updated>
-      <workItem from="1781573045023" duration="6248000" />
+      <workItem from="1781573045023" duration="7016000" />
     </task>
     <servers />
   </component>

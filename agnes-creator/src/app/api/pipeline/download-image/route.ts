@@ -1,8 +1,8 @@
-﻿// ============================================================
-// Pipeline Image Download Proxy
 // ============================================================
-// 服务端下载图片，绕过浏览器 CORS 限制
-// 用于 Production Pipeline 批量图生视频时的图片获取
+// Pipeline Image/Video Download Proxy
+// ============================================================
+// Server-side download of images and videos to bypass CORS.
+// Used by Production Pipeline for batch video generation.
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     body = await request.json();
   } catch {
     return NextResponse.json(
-      { success: false, error: "请求体解析失败" } satisfies DownloadResult,
+      { success: false, error: "Failed to parse request body" } satisfies DownloadResult,
       { status: 400 }
     );
   }
@@ -38,18 +38,17 @@ export async function POST(request: NextRequest) {
   const { url, shotId } = body;
   if (!url || typeof url !== "string") {
     return NextResponse.json(
-      { success: false, error: "缺少 url 参数" } satisfies DownloadResult,
+      { success: false, error: "Missing url parameter" } satisfies DownloadResult,
       { status: 400 }
     );
   }
 
-  // ------ 诊断信息 ------
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(url);
   } catch {
     return NextResponse.json(
-      { success: false, error: "URL 格式无效", urlLength: url.length } satisfies DownloadResult,
+      { success: false, error: "Invalid URL format", urlLength: url.length } satisfies DownloadResult,
       { status: 400 }
     );
   }
@@ -64,11 +63,10 @@ export async function POST(request: NextRequest) {
     : "[Pipeline Proxy]";
 
   console.log(
-    logPrefix + " 开始下载图片 URL: " + urlLength + " chars, " +
+    logPrefix + " Downloading URL: " + urlLength + " chars, " +
     "domain=" + urlDomain + ", proto=" + urlProtocol + ", hasQuery=" + urlHasQuery
   );
 
-  // ------ 执行下载 ------
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -76,7 +74,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "Accept": "image/avif,image/webp,image/apng,image/png,image/jpeg,*/*",
+        "Accept": "image/avif,image/webp,image/apng,image/png,image/jpeg,video/mp4,video/webm,video/quicktime,*/*",
         "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
         "User-Agent": "Agnes-Studio/2.4",
       },
@@ -95,21 +93,21 @@ export async function POST(request: NextRequest) {
     const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
 
     console.log(
-      logPrefix + " 响应: status=" + response.status + " " + response.statusText + ", " +
+      logPrefix + " Response: status=" + response.status + " " + response.statusText + ", " +
       "content-type=" + contentType + ", content-length=" + contentLength + ", " +
-      "耗时=" + (Date.now() - startTime) + "ms"
+      "elapsed=" + (Date.now() - startTime) + "ms"
     );
 
     if (!response.ok) {
       let errorMsg = response.statusText || "Unknown";
       if (response.status === 403) {
-        errorMsg = "图片访问被拒绝 (403 Forbidden) - 可能是 Signed URL 过期或权限不足";
+        errorMsg = "Access denied (403 Forbidden) - possible signed URL expiration";
       } else if (response.status === 404) {
-        errorMsg = "图片不存在 (404 Not Found)";
+        errorMsg = "Resource not found (404 Not Found)";
       } else if (response.status === 429) {
-        errorMsg = "请求频率过高 (429 Too Many Requests)";
+        errorMsg = "Rate limited (429 Too Many Requests)";
       } else if (response.status >= 500) {
-        errorMsg = "图片服务器错误 (" + response.status + ")";
+        errorMsg = "Server error (" + response.status + ")";
       }
 
       return NextResponse.json({
@@ -122,24 +120,24 @@ export async function POST(request: NextRequest) {
       } satisfies DownloadResult);
     }
 
-    if (!contentType.startsWith("image/")) {
-      console.warn(logPrefix + " 响应 Content-Type 不是图片: " + contentType);
+    if (!contentType.startsWith("image/") && !contentType.startsWith("video/")) {
+      console.warn(logPrefix + " Content-Type is not image or video: " + contentType);
     }
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     console.log(
-      logPrefix + " 下载成功: " + (buffer.length / 1024).toFixed(1) + " KB, " +
-      "耗时=" + (Date.now() - startTime) + "ms"
+      logPrefix + " Download success: " + (buffer.length / 1024).toFixed(1) + " KB, " +
+      "elapsed=" + (Date.now() - startTime) + "ms"
     );
 
     const base64 = buffer.toString("base64");
     const dataUrl = "data:" + contentType + ";base64," + base64;
 
     const pathSegments = parsedUrl.pathname.split("/");
-    const rawFileName = pathSegments[pathSegments.length - 1] || "shot-" + (shotId || "unknown") + ".png";
-    const fileName = rawFileName.includes(".") ? rawFileName : "shot-" + (shotId || "unknown") + ".png";
+    const rawFileName = pathSegments[pathSegments.length - 1] || "shot-" + (shotId || "unknown") + ".bin";
+    const fileName = rawFileName.includes(".") ? rawFileName : "shot-" + (shotId || "unknown") + ".bin";
 
     return NextResponse.json({
       success: true,
@@ -157,15 +155,15 @@ export async function POST(request: NextRequest) {
     const isTimeout = errorMessage.toLowerCase().includes("abort") || errorMessage.toLowerCase().includes("timeout");
 
     console.error(
-      logPrefix + " 下载异常: " + errorMessage.slice(0, 200) + ", " +
-      "耗时=" + elapsed + "ms, isTimeout=" + isTimeout
+      logPrefix + " Download error: " + errorMessage.slice(0, 200) + ", " +
+      "elapsed=" + elapsed + "ms, isTimeout=" + isTimeout
     );
 
     return NextResponse.json({
       success: false,
       error: isTimeout
-        ? "图片下载超时 (" + elapsed + "ms)"
-        : "图片下载失败: " + errorMessage.slice(0, 200),
+        ? "Download timeout (" + elapsed + "ms)"
+        : "Download failed: " + errorMessage.slice(0, 200),
       statusCode: isTimeout ? 408 : 0,
       urlLength, urlDomain, urlProtocol, urlHasQuery,
     } satisfies DownloadResult, { status: 200 });

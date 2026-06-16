@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n";
 import { Video, Pause, Play, Trash2, Lock, Film } from "lucide-react";
@@ -10,13 +10,13 @@ interface BatchOperationsProps {
   onBatchResume: () => void;
   onBatchDelete: () => void;
   onBatchLock: () => void;
-  onBatchImportTimeline: () => void;
+
 }
 
 export function BatchOperations({
   selectedCount, onBatchGenerateVideos,
   onBatchPause, onBatchResume, onBatchDelete, onBatchLock,
-  onBatchImportTimeline,
+
 }: BatchOperationsProps) {
   const { t } = useTranslation();
   const hasSelection = selectedCount > 0;
@@ -27,7 +27,7 @@ export function BatchOperations({
     { label: t("pipeline.batchResume"), icon: Play, onClick: onBatchResume, disabled: !hasSelection },
     { label: t("pipeline.batchDelete"), icon: Trash2, onClick: onBatchDelete, disabled: !hasSelection },
     { label: t("pipeline.batchLock"), icon: Lock, onClick: onBatchLock, disabled: !hasSelection },
-    { label: t("pipeline.batchImportTimeline"), icon: Film, onClick: onBatchImportTimeline, disabled: !hasSelection },
+
   ];
 
   return (

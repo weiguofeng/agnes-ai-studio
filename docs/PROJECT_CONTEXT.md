@@ -1,8 +1,8 @@
-﻿# Agnes AI Studio
+# Agnes AI Studio
 
 ## Current Version
 
-V3.0
+V3.1
 
 ---
 
@@ -10,7 +10,9 @@ V3.0
 
 Agnes AI Studio is an AI video production platform. The target pipeline is:
 
-Story -> Storyboard -> Prompt -> Image -> Image-to-Video -> Assets Library -> Video Editor -> Export
+Character -> Project -> Pipeline -> Generate Character Images -> Batch Generate Videos -> Assets Library (auto-save) -> Video Editor -> Export
+
+The old "Story -> Storyboard -> Prompt -> Image" flow has been removed. Stories are imported from external LLMs as storyboards directly into projects.
 
 ---
 
@@ -20,17 +22,15 @@ Story -> Storyboard -> Prompt -> Image -> Image-to-Video -> Assets Library -> Vi
 - Character Library
 - Project Management
 - Storyboard Builder
-- Assets Library
+- Assets Library (Zustand persist + IndexedDB dual storage)
 - Video Editor
 - AI Story Studio
-- Agnes Video Integration
-- Internationalization System
+- Agnes Video V2.0 Integration
+- Internationalization System (zh-CN / en-US)
 - API Key Management
-- QA Testing
-- Production Pipeline (V2.7+)
-- V2.8 Production Hardening
-- V2.9 Pipeline UX & Recovery Hardening
-- V3.0 Pipeline Queue Refactoring (see current state)
+- Production Pipeline (V3.1)
+- Pipeline Rate Limiting & CORS Handling
+- Multi-Character Video Generation
 
 ---
 
@@ -41,64 +41,135 @@ Story -> Storyboard -> Prompt -> Image -> Image-to-Video -> Assets Library -> Vi
 
 ---
 
-## Current State (V3.0)
+## Current State (V3.1)
 
 ### Production Pipeline Architecture
 
-The pipeline page (`/pipeline`) is the main production interface. It has a two-column layout:
+The pipeline page (`/pipeline`) is the main production interface. Two-column layout:
 
 **Left Column:** StoryboardPreview + CharacterImageSection
 **Right Column:** StatisticsPanel, CurrentTasksWidget, ProductionQueuePanel, StorageMonitor, ProjectExportPanel
 
-### Production Queue
+### Layout & Navigation
 
-The queue focuses **only on video generation**. Image generation has been removed from the queue.
+- **Removed:** ProductionModeToggle (formal/draft mode toggle from page header)
+- **Removed:** TimelineImport component and all its logic (importAll, importLocked, importScene, importShot handlers, BatchOperations import timeline button)
+- **Removed:** Image generation from production queue (no handleGenerateImage, no image status/buttons)
 
-**QueueCardView features:**
-- Video preview only (full-width, no side-by-side image preview)
-- Character image thumbnails per shot (clickable for full preview)
-- Truncated prompt display with click-to-expand editing
-- Video duration selector (3s/5s/8s/10s/18s/custom)
-- Video status badge, lock/unlock, regenerate, delete actions
-- Batch operations (generate videos, pause, resume, delete, lock)
+### StatisticsPanel
 
-### Video Generation Flow
+Shows: total shots, total scenes, videos completed, failed count, pending count, success rate, average duration (minutes), estimated remaining (minutes, calculated as remaining × 2 min per video).
 
-1. Shots are loaded from project scenes via "Load to Queue" button
-2. Character reference images are generated in CharacterImageSection (stored in `project.characterImages`)
-3. User selects shots and clicks "Batch Generate Videos"
-4. `hasVideoSourceImage` checks if each shot has either legacy `imageResultUrl` or character image URLs
-5. `handleGenerateVideo` creates video via Agnes API:
-   - **Single character:** passes image URL as `"image": "url"` (string)
-   - **Multi character:** passes image URLs as `"extra_body": { "image": ["url1", "url2"] }` (array)
-   - Uses JSON POST (not FormData) to `POST /v1/videos`
-   - The API server fetches images from URLs directly (no CORS issues)
-6. Result is polled via `/agnesapi?video_id=<ID>` with rate limiting
+- **Removed:** imagesCompleted stat (no longer relevant)
+- **Fixed:** avgDuration now uses videoCompletedAt - videoStartedAt, displayed in minutes
+- **Fixed:** estimatedRemaining uses fixed rate of ~2 min per 5-second video
+- **Fixed:** pendingCount only counts video status (not image)
+
+### CurrentTasksWidget
+
+Shows active pipeline video tasks with animated progress bars.
+
+- **Filtered**: Only shows tasks with id starting with "pipeline-video-" (excludes other page tasks)
+- **Auto-cleanup**: When all pipeline tasks complete, removed from store after 3 seconds
+- **Dynamic progress**: Processing tasks show percentage bar, queued/submitted show animated indeterminate bar
+- **Hides completely**: When no active or failed tasks, returns null
+
+### ProductionQueuePanel
+
+**Video generation flow:**
+1. Shots loaded from project scenes via "Load to Queue"
+2. Character images generated in CharacterImageSection → stored in `project.characterImages`
+3. User selects shots → "Batch Generate Videos"
+4. `hasVideoSourceImage` checks each shot has character images
+5. `handleGenerateVideo` calls `agnes.video.createFromImage()`:
+   - Single character: `"image": "url"`
+   - Multi character: `"extra_body": { "image": ["url1", "url2"] }`
+   - Uses JSON POST to `POST /v1/videos` (not FormData)
+   - Character image URLs passed directly (API fetches server-side)
+6. Polls via `/agnesapi?video_id=<ID>` with global rate limiter
+7. On completion: video URL stored in queue, auto-saved to asset library AND synced to assetStore
+
+**Video duration:** 3s/5s/8s/10s/18s presets + custom. Uses API-valid `num_frames` (%8==1):
+- 3s: 81 frames
+- 5s: 121 frames
+- 8s: 193 frames
+- 10s: 241 frames
+- 18s: 441 frames
+
+**QueueCardView features:** Character image thumbnails per shot, truncated prompt display with expand/edit, video duration selector, video status badge, lock/unlock/regenerate/delete actions, batch operations.
 
 ### Rate Limiting (video.ts)
 
-- `PollRateLimiter`: max 2 concurrent /agnesapi queries
-- Initial stagger: random 0-2000ms before first poll
-- Jitter: ±30% random on each poll interval
-- 429 backoff: interval × 2.5 on rate limit
-- Default interval: 4000ms, max: 30000ms
+Three-layer rate limiting for Agnes API calls:
 
-### API Integration
+1. **Mutex queue** — Promise-chain mutex serializes all concurrent acquire() calls
+2. **Interval limiting** — Query: 12000ms between requests (~5 RPM). Create: 5000ms between POST
+3. **Sliding window** — Max 3 queries per 20s window; waits when approaching limit
 
-- `createFromImage` sends JSON POST with image URL(s) - NOT FormData/file upload
-- `client.ts` `postForm` no longer sets `Content-Type` header manually (fixes missing boundary)
-- Image-to-video and text-to-video use the same endpoint `/v1/videos`
-- Model: `agnes-video-v2.0`
+Poll defaults: interval=15000ms, maxInterval=60000ms, 429 backoff=4x, error backoff=2x
+
+### Video CORS Handling
+
+- `StorageService.saveAssetFromUrl` for videos: directly uses server proxy (`/api/pipeline/download-image`), skips browser fetch (video CDNs have no CORS headers)
+- Download proxy updated to accept `video/mp4`, `video/webm`, `video/quicktime` content types
+
+### Asset Library (Dual Storage)
+
+**StorageService** (IndexedDB via AssetsDB):
+- `saveAssetFromUrl` saves blob + metadata to IndexedDB
+- `refreshAssetUrl()` recreates blob URLs after page refresh (blob: URLs expire)
+- `/asset-browser` page uses this system
+- Filters: type (all/image/video), project tag, date range (today/week/month), sort (newest/oldest)
+- Character images and videos auto-saved on generation
+
+**useAssetStore** (Zustand persist):
+- `/assets` page uses this system
+- Pipeline-created assets synced here via `addAsset()`:
+  - Character images: tags=["character", charName, projectName], category="generated"
+  - Videos: tags=["video", sceneTitle, shotTitle], category="output"
+- Supports type filter, tag filter, search, favorites, batch delete
 
 ### Character Image Handling
 
-- Character images are stored in `project.characterImages` (Record<string, string>)
-- Generated from CharacterImageSection via Agnes Image API
-- Images are hosted on Agnes CDN (no CORS headers)
-- For display/preview, images are loaded directly (CORS error handled gracefully)
-- For video generation, URLs are passed to Agnes API which fetches them server-side
+- Images stored in `project.characterImages` (Record<string, charId → url>)
+- Generated via CharacterImageSection → Agnes Image API
+- On generation: auto-saved to StorageService + synced to useAssetStore
+- Character reference images from character library shown in section
+- Prompt editor with regenerable prompt and size selection
 
-### Known Issues
+### API Integration
 
-1. Character CDN images lack CORS headers - browser-side canvas operations (compositeImages) require server proxy fallback. This is handled by downloading via `/api/pipeline/download-image` before compositing.
-2. Legacy `imageResultUrl` field may still exist on queue items from old sessions but is no longer the primary image source.
+- `POST /v1/videos` — Creates video task (JSON, image URL not file)
+- `GET /agnesapi?video_id=<ID>` — Query result (recommended)
+- `GET /v1/videos/{task_id}` — Legacy query
+- Model: `agnes-video-v2.0`
+- Default frame_rate: 24
+- Valid num_frames: >= 49 && num_frames % 8 == 1
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/app/pipeline/page.tsx` | Main pipeline page |
+| `src/services/agnes/video.ts` | Video API service + rate limiter |
+| `src/services/agnes/client.ts` | HTTP client + config |
+| `src/services/StorageService.ts` | IndexedDB asset storage |
+| `src/components/pipeline/StatisticsPanel.tsx` | Production statistics |
+| `src/components/pipeline/CurrentTasksWidget.tsx` | Live task progress |
+| `src/components/pipeline/QueueCardView.tsx` | Queue item cards |
+| `src/components/pipeline/CharacterImageSection.tsx` | Character image generation |
+| `src/components/pipeline/StoryboardPreview.tsx` | Storyboard preview |
+| `src/stores/productionQueueStore.ts` | Queue state + batch stats |
+| `src/stores/taskStore.ts` | Task state + poll scheduler |
+| `src/lib/imageCompositor.ts` | Video duration presets |
+
+---
+
+## Known Issues
+
+1. **Character CDN images (platform-outputs.agnes-ai.space)** lack CORS headers. Browser-side canvas operations require server proxy fallback. Handled in `imageCompositor.ts` via `/api/pipeline/download-image`.
+2. **Video CDN (platform-outputs.agnes-ai.space)** also lacks CORS headers. `StorageService` uses proxy for all video downloads.
+3. **Blob URLs expire on page refresh.** `StorageService.refreshAssetUrl()` recreates them from IndexedDB on load.
+4. **429 rate limits on /agnesapi.** Mutex + sliding window + conservative intervals in place. May need adjustment if API limits change.

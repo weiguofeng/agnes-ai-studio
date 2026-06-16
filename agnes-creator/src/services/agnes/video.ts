@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // Agnes SDK - video generation service
 // ============================================================
 // API:
@@ -15,6 +15,81 @@ import type {
   TaskStatus,
 } from "./types";
 
+
+// ============================================================
+// Global Rate Limiter for Agnes API
+// Prevents 429 (rate limit) errors by throttling all
+// API calls to at most 1 request per RATE_LIMIT_WINDOW ms
+// ============================================================
+
+// ============================================================
+// Conservative rate limiting with sliding-window tracking
+// Prevents 429 errors by tracking actual request rate
+// and self-throttling before hitting API limits
+// ============================================================
+// Observed behavior: ~5 queries triggers 429 (~17s window)
+// Target: max 3 queries per 20s sliding window = ~6700ms between
+// We use 12000ms to be safe and account for jitter
+// ============================================================
+
+const RATE_LIMIT_WINDOW = 12000; // ms between query requests (max ~5 RPM)
+const CREATE_RATE_LIMIT_WINDOW = 5000; // ms between POST creates (max ~12 RPM)
+const MAX_BURST_WINDOW = 20000; // sliding window for burst detection
+const MAX_QUERIES_PER_WINDOW = 3; // max queries in sliding window
+
+class PollRateLimiter {
+  private lastCallTime = 0;
+  private lastCreateCallTime = 0;
+  private mutex: Promise<void> = Promise.resolve();
+  private queryTimestamps: number[] = []; // sliding window timestamps
+
+  /** Wait for rate-limit slot, then proceed. Use `true` for POST calls. */
+  async acquire(isCreateCall = false): Promise<void> {
+    // Chain onto mutex to serialize all concurrent callers
+    const prev = this.mutex;
+    let release: (() => void) | undefined;
+    this.mutex = new Promise<void>((resolve) => { release = resolve; });
+    await prev;
+
+    try {
+      const window = isCreateCall ? CREATE_RATE_LIMIT_WINDOW : RATE_LIMIT_WINDOW;
+      const now = Date.now();
+
+      // Sliding window check: count queries in last MAX_BURST_WINDOW ms
+      if (!isCreateCall) {
+        this.queryTimestamps = this.queryTimestamps.filter(t => now - t < MAX_BURST_WINDOW);
+        if (this.queryTimestamps.length >= MAX_QUERIES_PER_WINDOW) {
+          // Nearing limit: wait until the oldest query falls out of window
+          const oldestInWindow = now - this.queryTimestamps[0];
+          const extraWait = Math.max(MAX_BURST_WINDOW - oldestInWindow + 2000, 0);
+          if (extraWait > 0) {
+            await new Promise<void>((resolve) => setTimeout(resolve, extraWait + Math.random() * 2000));
+          }
+        }
+      }
+
+      // Base rate limiting: ensure minimum gap between calls
+      const lastTime = isCreateCall ? this.lastCreateCallTime : this.lastCallTime;
+      const elapsed = Date.now() - lastTime;
+      if (elapsed < window) {
+        const waitMs = window - elapsed + Math.random() * (window * 0.2); // 20% jitter
+        await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+      }
+
+      if (isCreateCall) {
+        this.lastCreateCallTime = Date.now();
+      } else {
+        this.lastCallTime = Date.now();
+        this.queryTimestamps.push(Date.now());
+      }
+    } finally {
+      release?.();
+    }
+  }
+}
+
+/** Singleton global rate limiter shared across all poll instances */
+const globalPollLimiter = new PollRateLimiter();
 export interface PollOptions {
   interval?: number;
   maxInterval?: number;
@@ -29,7 +104,7 @@ export function isAgnesRateLimitError(err: unknown): boolean {
 }
 
 export function getNextPollInterval(currentInterval: number, maxInterval: number, rateLimited = false): number {
-  const factor = rateLimited ? 2 : 1.3;
+  const factor = rateLimited ? 4.0 : 2.0;
   return Math.min(Math.ceil(currentInterval * factor), maxInterval);
 }
 
@@ -87,6 +162,7 @@ export function createVideoService(client: AgnesClient) {
   }
 
   async function queryAgnesApi(taskId: string): Promise<Record<string, unknown>> {
+    await globalPollLimiter.acquire(false);
     const config = client.getConfig();
     const baseDomain = config.baseUrl.replace(/\/v1$/, "");
     const url = `${baseDomain}/agnesapi?video_id=${encodeURIComponent(taskId)}`;
@@ -116,6 +192,7 @@ export function createVideoService(client: AgnesClient) {
       num_frames: params.numFrames ?? 121,
       frame_rate: params.frameRate ?? 24,
     };
+    await globalPollLimiter.acquire(true);
     const res = await client.post<unknown>("/videos", payload);
     console.debug("[Agnes SDK] POST /videos response:", JSON.stringify(res).slice(0, 800));
     const { taskId, videoId } = extractVideoTaskIds(res);
@@ -148,7 +225,8 @@ export function createVideoService(client: AgnesClient) {
       }
     }
     console.debug("[Agnes SDK] POST /videos (image):", JSON.stringify({ ...payload, image: payload.image ? "(set)" : undefined, extra_body: payload.extra_body ? "(set)" : undefined }).slice(0, 400));
-    const res = await client.post<unknown>("/videos", payload);
+    await globalPollLimiter.acquire(true);
+      const res = await client.post<unknown>("/videos", payload);
     console.debug("[Agnes SDK] POST /videos (image) response:", JSON.stringify(res).slice(0, 600));
     const { taskId, videoId } = extractVideoTaskIds(res);
     if (!taskId) throw new Error("Failed to create image-to-video task: " + JSON.stringify(res).slice(0, 300));
@@ -175,7 +253,7 @@ export function createVideoService(client: AgnesClient) {
 
   async function poll(taskId: string, options: PollOptions = {}): Promise<VideoResult> {
     const {
-      interval: initialInterval = 3000,
+      interval: initialInterval = 15000,
       maxInterval = 60000,
       timeout = 600000,
       onProgress,
@@ -192,6 +270,8 @@ export function createVideoService(client: AgnesClient) {
     };
 
     console.debug("[Agnes SDK] Start polling: taskId=", taskId, "interval:", initialInterval, "ms");
+
+
 
     while (true) {
       if (Date.now() - startTime > timeout) {

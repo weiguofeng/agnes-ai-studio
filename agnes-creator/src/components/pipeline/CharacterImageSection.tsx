@@ -13,7 +13,9 @@ import { useConfigStore } from "@/stores/configStore";
 import { agnes } from "@/services/agnes";
 import { logger } from "@/lib/logger";
 import { Loader2, Sparkles, Users, CheckCircle2, AlertCircle, Download, Image as ImageIcon, Save } from "lucide-react";
-import type { Character } from "@/types";
+import { StorageService } from '@/services/StorageService';
+import { useAssetStore } from '@/stores/assetStore';
+import type { Character } from '@/types';
 
 const SIZE_OPTIONS = [
   { value: "1024x1024", label: "1:1 Square" },
