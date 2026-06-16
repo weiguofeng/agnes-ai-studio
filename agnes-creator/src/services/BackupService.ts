@@ -8,6 +8,10 @@ import { usePromptHistoryStore } from "@/stores/promptHistoryStore";
 import { AssetsDB, type AssetRecord } from "./AssetsDB";
 import { logger } from "@/lib/logger";
 
+export type ProjectBackupAsset = AssetRecord & {
+  dataUrl?: string;
+};
+
 export interface ProjectBackup {
   version: "2.8";
   exportedAt: number;
@@ -19,18 +23,46 @@ export interface ProjectBackup {
     styleDna: string;
     lockedCharacterIds: string[];
     scenes: any[];
-    storyText?: string;
+    storyScript?: string;
     createdAt: number;
     updatedAt: number;
   };
   productionQueue: any[];
   timeline: any[];
   promptHistory: Record<string, any[]>;
-  assets: AssetRecord[];
+  assets: ProjectBackupAsset[];
 }
 
 const BACKUP_PREFIX = "agnes-backup-";
 const MAX_AUTO_BACKUPS = 7;
+
+function storeNameForAsset(type: AssetRecord["type"]): "images" | "videos" | "thumbnails" {
+  return type === "video" ? "videos" : type === "thumbnail" ? "thumbnails" : "images";
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  const base64 = btoa(binary);
+  return `data:${blob.type || "application/octet-stream"};base64,${base64}`;
+}
+
+async function collectProjectAssets(projectId: string): Promise<ProjectBackupAsset[]> {
+  const assets = await AssetsDB.queryMeta("projectId", projectId);
+  const backupAssets: ProjectBackupAsset[] = [];
+  for (const asset of assets) {
+    try {
+      const blob = await AssetsDB.load(storeNameForAsset(asset.type), asset.id);
+      backupAssets.push(blob ? { ...asset, dataUrl: await blobToDataUrl(blob) } : asset);
+    } catch (err) {
+      logger.warn("Backup", "资产二进制导出失败，仅保留 metadata", { id: asset.id, error: String(err) });
+      backupAssets.push(asset);
+    }
+  }
+  return backupAssets;
+}
 
 /** 生成备份文件名 */
 export function generateBackupFilename(projectId: string): string {
@@ -46,7 +78,8 @@ export async function exportBackup(projectId: string): Promise<{ success: boolea
     const queueItems = useProductionQueue.getState().items.filter(i => i.projectId === projectId);
     const editorState = useEditorStore.getState();
     const promptHistory = usePromptHistoryStore.getState().history;
-    const assets = await AssetsDB.queryMeta("projectId", projectId);
+    const assets = await collectProjectAssets(projectId);
+    const timelines = editorState.timelines.filter(t => t.projectId === projectId);
 
     const backup: ProjectBackup = {
       version: "2.8",
@@ -59,11 +92,12 @@ export async function exportBackup(projectId: string): Promise<{ success: boolea
         styleDna: project.styleDna || "",
         lockedCharacterIds: project.lockedCharacterIds || [],
         scenes: project.scenes || [],
+        storyScript: project.storyScript || "",
         createdAt: project.createdAt,
         updatedAt: project.updatedAt,
       },
       productionQueue: queueItems,
-      timeline: editorState.timelines,
+      timeline: timelines,
       promptHistory,
       assets,
     };

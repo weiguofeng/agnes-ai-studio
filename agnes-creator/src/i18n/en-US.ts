@@ -156,6 +156,29 @@ const en: Translations = {
   "project.backToList": "Back to Projects",
   "project.storyboard": "Storyboard",
   "project.editor": "Editor",
+  // Project Detail
+  "project.overview": "Overview",
+  "project.settings": "Settings",
+  "project.storyboardDesc": "Manage scenes and shots, link characters for consistency",
+  "project.noScenes": "No scenes yet",
+  "project.addSceneHint": "Click the button to add your first scene, then paste storyboard from your LLM",
+  "project.sceneTitle": "Scene Title",
+  "project.sceneDesc": "Scene description (from external LLM)",
+  "project.shotTitle": "Shot Title",
+  "project.shotDesc": "Shot description",
+  "project.selectCharacters": "Select Characters",
+  "project.noCharactersLinked": "No characters linked",
+  "project.stats": "Project Stats",
+  "project.totalDuration": "Total Duration",
+  "project.goToPipeline": "Go to Pipeline",
+  "project.imageShort": "Image",
+  "project.videoShort": "Video",
+  "project.untitled": "Untitled",
+  "project.duration": "Duration",
+  "project.addShot": "Add Shot",
+  "project.shot": "Shot",
+  "project.noCharacters": "No characters",
+
 
   // Storyboard
   "storyboard.title": "Storyboard",
@@ -433,6 +456,42 @@ const en: Translations = {
   "pipeline.imageFetchFailed": "Image fetch failed",
   "pipeline.noVideoTaskCreated": "No video task was created",
   "pipeline.taskCancelled": "Task cancelled",
+  // Pipeline Storyboard
+  "pipeline.storyboardPreview": "Storyboard Preview",
+  "pipeline.storyboardPreviewDesc": "Storyboard loaded from project detail. Confirm and load into the production queue",
+  "pipeline.noStoryboard": "No storyboard data",
+  "pipeline.noStoryboardHint": "Add scenes and shots in the project detail page Storyboard tab first",
+  "pipeline.loadToQueue": "Load to Production Queue",
+  "pipeline.reloadToQueue": "Reload to Queue",
+  "pipeline.loadedToQueue": "Loaded to production queue",
+  "pipeline.noShotsInScene": "No shots in this scene",
+  // Pipeline Character Images
+  "pipeline.charImages": "Character Images",
+  "pipeline.charImagesDesc": "Generate unified reference images for characters, used in image-to-video for consistency",
+  "pipeline.generateCharImage": "Generate Character Image",
+  "pipeline.regenerateCharImage": "Regenerate",
+  "pipeline.imageGenerated": "Generated",
+  "pipeline.charImageError": "Character image generation failed",
+  "pipeline.noCharsInShots": "No characters linked to shots. Add character associations in the project detail page first",
+  "pipeline.allCharImagesDone": "All character images generated",
+  "pipeline.charImagePrompt": "Prompt (editable)",
+  "pipeline.charImagePromptPlaceholder": "Edit the prompt and regenerate",
+  "pipeline.charImageSize": "Size",
+  "pipeline.charRefImages": "Reference Images",
+  "pipeline.charImageSaved": "Saved to character library",
+  "pipeline.charImageSaveError": "Failed to save to character library",
+
+  // V2.9 Video Duration & Multi-Image
+  "pipeline.videoDuration": "Video Duration",
+  "pipeline.videoDurationDesc": "Set the duration for video generation",
+  "pipeline.customDuration": "Custom",
+  "pipeline.durationSeconds": "seconds",
+  "pipeline.multiImage": "Multi-Character Images",
+  "pipeline.multiImageDesc": "This shot has multiple characters. Their reference images will be combined for video generation.",
+
+
+
+
   "recovery.subtitle": "Backup, restore, and integrity check center",
   "recovery.backupSuccess": "Backup exported successfully",
   "recovery.backupFailed": "Backup export failed",

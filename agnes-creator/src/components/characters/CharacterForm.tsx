@@ -25,6 +25,7 @@ export function CharacterForm({ open, onOpenChange, onSubmit, initial }: Charact
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(initial?.tags || []);
   const [refImages, setRefImages] = useState<string[]>(initial?.referenceImages || []);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const addTag = () => { const tVal = tagInput.trim(); if (tVal && !tags.includes(tVal)) { setTags([...tags, tVal]); setTagInput(""); } };
 
@@ -72,10 +73,15 @@ export function CharacterForm({ open, onOpenChange, onSubmit, initial }: Charact
             <Label>{t("character.referenceImages")}</Label>
             <div className="flex flex-wrap gap-2">
               {refImages.map((url, i) => (
-                <div key={i} className="relative group/img w-20 h-20 rounded-lg overflow-hidden border border-white/10">
+                <div key={i} className="relative group/img w-20 h-20 rounded-lg overflow-hidden border border-white/10 cursor-pointer"
+                  onClick={() => setPreviewUrl(url)}>
                   <img src={url} alt="" className="w-full h-full object-cover" />
-                  <button className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center" onClick={() => setRefImages(refImages.filter((_, j) => j !== i))}>
-                    <X className="h-4 w-4 text-white" />
+                  {/* Delete button - top right corner */}
+                  <button
+                    className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-500/80"
+                    onClick={(e) => { e.stopPropagation(); setRefImages(refImages.filter((_, j) => j !== i)); }}
+                  >
+                    <X className="h-3 w-3 text-white" />
                   </button>
                 </div>
               ))}
@@ -84,6 +90,16 @@ export function CharacterForm({ open, onOpenChange, onSubmit, initial }: Charact
               </Button>
             </div>
           </div>
+          
+          {/* Image preview lightbox */}
+          <Dialog open={!!previewUrl} onOpenChange={(o) => { if (!o) setPreviewUrl(null); }}>
+            <DialogContent className="sm:max-w-3xl p-2 bg-black/90 border-white/10">
+              {previewUrl && (
+                <img src={previewUrl} alt="" className="w-full h-auto max-h-[80vh] object-contain rounded" />
+              )}
+            </DialogContent>
+          </Dialog>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
             <Button onClick={handleSubmit} disabled={!name.trim()}>{initial ? t("common.save") : t("common.create")}</Button>

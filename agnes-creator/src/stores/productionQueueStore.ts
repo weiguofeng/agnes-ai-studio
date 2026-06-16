@@ -255,7 +255,7 @@ export const useProductionQueue = create<ProductionQueueState>()(
       ),
       getPendingVideoItems: (projectId) => get().items.filter(
         (i) => i.projectId === projectId && i.videoStatus === "pending" && !i.videoLocked
-          && i.imageStatus === "completed"
+          && i.imageStatus === "completed" && !!i.imageResultUrl
       ),
       
       setPaused: (paused) => {

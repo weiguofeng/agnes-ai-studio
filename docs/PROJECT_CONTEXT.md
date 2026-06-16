@@ -1,59 +1,84 @@
 # Agnes AI Studio
 
-## 当前版本
+## Current Version
 
 V2.8.1
 
 ---
 
-## 项目定位
+## Project Positioning
 
-Agnes AI Studio 是一个 AI 视频生产平台。目标是从一个故事自动生成完整短视频项目。
+Agnes AI Studio is an AI video production platform. The target pipeline is:
 
----
-
-## 已完成模块
-- ✅ Prompt Workflow
-- ✅ Character Library
-- ✅ Project Management
-- ✅ Storyboard Builder
-- ✅ Assets Library
-- ✅ Video Editor
-- ✅ AI Story Studio
-- ✅ Agnes Video Integration
-- ✅ 国际化系统
-- ✅ API Key Management
-- ✅ QA Testing
-- ✅ Production Pipeline（批量图生视频修复）
-- ✅ V2.7 Production Dashboard
-- ✅ **V2.8 Production Hardening**
-- ✅ **V2.8.1 Pipeline UX & Recovery Hardening**
-- ✅ **V2.8.1 Pipeline Prompt Crash Fix**
-- ✅ **V2.8.1 Production Queue Batch Image Fix**
-- ✅ **V2.8.1 Production Queue Video Task Fix**
-- ✅ **V2.8.1 Production Queue Control & Storage Fix**
-
----
-
-## QA 状态
-Build: ✅ 通过
-TypeScript: ✅ 0 错误
-Lint: ✅ 通过（保留既有 warning）
-Unit Tests: ✅ 生产队列图片/视频/硬化回归测试通过
-Browser QA: ✅ `http://localhost:3000/pipeline` 正常加载，端口检查仅 3000 监听
-
----
-
-## 核心工作流
 Story -> Storyboard -> Prompt -> Image -> Image-to-Video -> Assets Library -> Video Editor -> Export
 
 ---
 
-## 当前开发重点
-V2.8.1 Pipeline UX & Recovery Hardening 已完成，生产队列批量图片生成、批量图生视频、完整 Prompt 展示、实时任务显示、批量暂停/终止、项目级存储统计和故事脚本恢复已修复，并通过单元测试、TypeScript、Lint、Build 与 Browser QA 验证。
+## Completed Modules
+
+- Prompt Workflow
+- Character Library
+- Project Management
+- Storyboard Builder
+- Assets Library
+- Video Editor
+- AI Story Studio
+- Agnes Video Integration
+- Internationalization System
+- API Key Management
+- QA Testing
+- Production Pipeline
+- V2.7 Production Dashboard
+- V2.8 Production Hardening
+- V2.8.1 Pipeline UX & Recovery Hardening
+- V2.8.1 Pipeline Prompt Crash Fix
+- V2.8.1 Production Queue Batch Image Fix
+- V2.8.1 Production Queue Video Task Fix
+- V2.8.1 Production Queue Control & Storage Fix
+- V2.8.1 Storage Proxy Fallback Fix
+- V2.8.1 Timeline Import Recovery Fix
+- V2.8.1 Agnes Polling Rate-Limit Backoff Fix
+- V2.8.1 Closed-Loop QA Gate
+- V2.8.1 Timeline Playback Import Fix
+- V2.8.1 Dev Startup Recovery Fix
 
 ---
 
-## 已知问题
-1. Agnes 服务端仍可能返回 500 或远端任务不存在，客户端现在会保留图生视频主流程并显示失败/取消状态，不会静默降级。
-2. 历史 ESLint warning 仍需在 V2.9 清理。
+## QA Status
+
+- Build: passed with `next build`
+- TypeScript: passed with `tsc --noEmit`
+- Lint: passed through `eslint src` with existing warnings
+- Unit Tests: production hardening, production queue, storage fallback, Agnes polling regressions, timeline playback import, and closed-loop QA gate regressions passed with 9 files / 76 tests in the latest local pass
+- Browser QA: `http://localhost:3001` returned HTTP 200 after the dev server restart
+- Export QA: JSON pipeline export downloaded and parsed successfully in the previous pass
+- Closed-Loop QA: `agnes-creator` now has `npm run qa:closed-loop`, `npm run typecheck`, `npm run test:unit`, `npm run test:smoke`, and `npm run test:integration` script entry points. The closed-loop plan and report template live in `docs/QA_CLOSED_LOOP_PLAN.md` and `docs/QA_CLOSED_LOOP_REPORT_TEMPLATE.md`.
+- Lint Gate: `npm run lint` now uses ESLint CLI (`eslint src`) instead of deprecated `next lint`; `npm run lint:report` can generate a JSON warning baseline.
+
+---
+
+## Core Workflow
+
+Story -> Storyboard -> Prompt -> Image -> Image-to-Video -> Assets Library -> Video Editor -> Export
+
+---
+
+## Current Development Focus
+
+V2.8.1 Pipeline UX & Recovery Hardening now includes the storage proxy fallback, timeline import recovery, Agnes polling rate-limit backoff, closed-loop QA gate, and timeline playback import hardening for the story-to-export workflow.
+
+Storage persistence falls back to the server download proxy when direct browser fetch of remote Agnes/CDN URLs fails because of CORS, URL policy, or signed URL access behavior. Timeline import now creates or reuses a project-scoped editor timeline for the selected project instead of importing into another active project's timeline. Before writing video clips to the editor timeline, the pipeline localizes remote Agnes/CDN image and video URLs into playable Blob URLs via the asset store when possible, while preserving the original remote URLs in clip metadata.
+
+Agnes video polling detects 429 / rate-limit responses and backs off more aggressively while keeping the image-to-video task active. The production queue only returns pending image-to-video candidates when image generation is completed and a real image URL exists.
+
+Closed-loop QA now separates build and lint responsibilities: Next build compiles and generates types, while ESLint CLI enforces source linting and can write a JSON warning baseline.
+
+The dev server startup path was also hardened after a syntax break in task rendering components prevented `next dev` from staying reachable.
+
+---
+
+## Known Issues
+
+1. Agnes service responses can still include 500 errors or remote task lookup failures. The client must keep image-to-video as the main workflow and use retry/recovery/pause rather than text-to-video fallback.
+2. Historical ESLint warnings still need cleanup in V2.9.
+3. `eslint src` still reports existing warnings unrelated to this startup fix.

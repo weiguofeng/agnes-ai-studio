@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useTranslation } from "@/i18n";
-import { Home, Settings, ImageIcon, Shuffle, Video, Sparkles, History, Cpu, BookTemplate, Users, FolderKanban, Film, PanelsTopLeft, Clapperboard, Wand2, Factory } from "lucide-react";
+import { Home, Settings, ImageIcon, Shuffle, Video, Sparkles, History, Cpu, BookTemplate, Users, FolderKanban, Film, PanelsTopLeft, Factory } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "menu.home", icon: Home },
@@ -16,13 +16,11 @@ const navItems = [
   { href: "/text-to-video", label: "menu.textToVideo", icon: Video },
   { href: "/image-to-video", label: "menu.imageToVideo", icon: Sparkles },
   "sep2",
-  { href: "/story-studio", label: "menu.aiStoryStudio", icon: Wand2 },
   { href: "/pipeline", label: "menu.pipeline", icon: Factory },
   { href: "/recovery", label: "menu.recoveryCenter", icon: History },
   { href: "/prompts", label: "menu.promptWorkflow", icon: BookTemplate },
   { href: "/characters", label: "menu.characterLibrary", icon: Users },
   { href: "/projects", label: "menu.projectManagement", icon: FolderKanban },
-  { href: "/storyboard", label: "menu.storyboard", icon: Clapperboard },
   { href: "/assets", label: "menu.assetsLibrary", icon: PanelsTopLeft },
   { href: "/editor", label: "menu.videoEditor", icon: Film },
   "sep3",

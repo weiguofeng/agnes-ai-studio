@@ -2,7 +2,8 @@
 // Unit Test: ProductionQueue prompt and video readiness
 // ============================================================
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from "vitest";
+import { getNextPollInterval, isAgnesRateLimitError } from "@/services/agnes/video";
 
 interface QueueItemLike {
   shotId: string;
@@ -15,7 +16,7 @@ interface QueueItemLike {
 }
 
 function getDisplayPrompt(item: QueueItemLike): string {
-  return item.customPrompt || item.videoPrompt || item.imagePrompt || item.shotTitle || '';
+  return item.customPrompt || item.videoPrompt || item.imagePrompt || item.shotTitle || "";
 }
 
 function getRunnableVideoIds(items: QueueItemLike[], selectedIds: string[]): string[] {
@@ -25,37 +26,51 @@ function getRunnableVideoIds(items: QueueItemLike[], selectedIds: string[]): str
   });
 }
 
-describe('ProductionQueue prompt and video readiness', () => {
-  it('编辑 Prompt 应优先显示完整视频 Prompt', () => {
+describe("Agnes video polling hardening", () => {
+  it("treats 429 and rate-limit errors as retryable polling pressure", () => {
+    expect(isAgnesRateLimitError(new Error("/agnesapi query failed (429): video status query rate limit exceeded"))).toBe(true);
+    expect(isAgnesRateLimitError("Too Many Requests")).toBe(true);
+    expect(isAgnesRateLimitError(new Error("500 Internal Server Error"))).toBe(false);
+  });
+
+  it("uses stronger backoff for rate-limited polling without exceeding the cap", () => {
+    expect(getNextPollInterval(3000, 60000, false)).toBe(3900);
+    expect(getNextPollInterval(3000, 60000, true)).toBe(6000);
+    expect(getNextPollInterval(45000, 60000, true)).toBe(60000);
+  });
+});
+
+describe("ProductionQueue prompt and video readiness", () => {
+  it("prefers the full video prompt in the prompt editor", () => {
     const item = {
-      shotId: 'shot-1',
-      shotTitle: '镜头 1: 缩略标题...',
-      imagePrompt: '完整图片提示词，包含角色、场景、灯光和高质量画面约束',
-      videoPrompt: '完整视频提示词，包含镜头运动、角色一致性、场景和电影感运动',
+      shotId: "shot-1",
+      shotTitle: "Shot 1: short title...",
+      imagePrompt: "Full image prompt with character, scene, lighting, and high-quality visual constraints.",
+      videoPrompt: "Full video prompt with camera motion, character consistency, scene, and cinematic movement.",
     };
 
     expect(getDisplayPrompt(item)).toBe(item.videoPrompt);
     expect(getDisplayPrompt(item)).not.toBe(item.shotTitle);
   });
 
-  it('自定义 Prompt 应覆盖默认完整 Prompt', () => {
+  it("lets a custom prompt override the default full prompt", () => {
     const item = {
-      shotId: 'shot-1',
-      shotTitle: '短标题',
-      videoPrompt: '完整默认提示词',
-      customPrompt: '人工修订后的完整提示词',
+      shotId: "shot-1",
+      shotTitle: "Short title",
+      videoPrompt: "Complete default prompt",
+      customPrompt: "Manually revised complete prompt",
     };
 
-    expect(getDisplayPrompt(item)).toBe('人工修订后的完整提示词');
+    expect(getDisplayPrompt(item)).toBe("Manually revised complete prompt");
   });
 
-  it('批量视频只应运行已完成图片且未锁定的视频项', () => {
+  it("runs batch video only for unlocked items with completed images", () => {
     const items: QueueItemLike[] = [
-      { shotId: 'shot-1', shotTitle: 'a', imageResultUrl: 'https://example.com/a.png' },
-      { shotId: 'shot-2', shotTitle: 'b' },
-      { shotId: 'shot-3', shotTitle: 'c', imageResultUrl: 'https://example.com/c.png', videoLocked: true },
+      { shotId: "shot-1", shotTitle: "a", imageResultUrl: "https://example.com/a.png" },
+      { shotId: "shot-2", shotTitle: "b" },
+      { shotId: "shot-3", shotTitle: "c", imageResultUrl: "https://example.com/c.png", videoLocked: true },
     ];
 
-    expect(getRunnableVideoIds(items, ['shot-1', 'shot-2', 'shot-3'])).toEqual(['shot-1']);
+    expect(getRunnableVideoIds(items, ["shot-1", "shot-2", "shot-3"])).toEqual(["shot-1"]);
   });
 });

@@ -1,4 +1,4 @@
-// ========== Prompt Types ==========
+﻿// ========== Prompt Types ==========
 export interface PromptTemplate {
   id: string;
   name: string;
@@ -275,6 +275,8 @@ export interface ProductionQueueItem {
   videoPrompt?: string;
   negativePrompt?: string;
   customPrompt?: string;
+  /** V2.9: Video duration control in frames (default 121 = ~5s at 24fps) */
+  videoDurationFrames?: number;
 }
 
 /** Prompt pack for a shot */

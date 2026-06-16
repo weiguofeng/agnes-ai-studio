@@ -144,7 +144,7 @@ export default function ImageToVideoPage() {
           )}
 
           <div className="space-y-1.5">
-            <Label>动态描述 (可选)</Label>
+            <Label>动态描述（可选）</Label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}

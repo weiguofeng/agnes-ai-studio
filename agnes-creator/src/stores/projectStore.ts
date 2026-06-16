@@ -30,7 +30,7 @@ export const useProjectStore = create<ProjectStoreState>()(
     (set, get) => ({
       projects: [],
       addProject: (data) => {
-        const id = genProjectId();
+        const id = data.id || genProjectId();
         const now = Date.now();
         set((s) => ({
           projects: [{

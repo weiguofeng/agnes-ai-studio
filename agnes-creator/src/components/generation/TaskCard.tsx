@@ -5,20 +5,20 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { VideoTask } from "@/hooks/useVideoTaskQueue";
 import {
-  Download, Loader2, AlertCircle, Trash2, Clock, Play,
+  Download, Loader2, AlertCircle, Trash2, Play,
   CheckCircle2, XCircle, X, ImageIcon,
 } from "lucide-react";
 
 function StatusBadge({ status }: { status: VideoTask["status"] }) {
   const config = {
-    queued:     { label: "排队中", className: "bg-muted text-muted-foreground", icon: Loader2 },
+    queued: { label: "排队中", className: "bg-muted text-muted-foreground", icon: Loader2 },
     processing: { label: "生成中", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300", icon: Loader2 },
-    completed:  { label: "已完成", className: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300", icon: CheckCircle2 },
-    failed:     { label: "失败",   className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300", icon: XCircle },
-    cancelled:  { label: "已取消", className: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300", icon: XCircle },
-    uploading:  { label: "上传中", className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300", icon: Loader2 },
-    submitted:  { label: "已提交", className: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300", icon: Loader2 },
-    timeout:    { label: "超时",   className: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300", icon: XCircle },
+    completed: { label: "已完成", className: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300", icon: CheckCircle2 },
+    failed: { label: "失败", className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300", icon: XCircle },
+    cancelled: { label: "已取消", className: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300", icon: XCircle },
+    uploading: { label: "上传中", className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300", icon: Loader2 },
+    submitted: { label: "已提交", className: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300", icon: Loader2 },
+    timeout: { label: "超时", className: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300", icon: XCircle },
   };
   const { label, className, icon: Icon } = config[status];
   return (
@@ -45,10 +45,10 @@ export function TaskCard({ task, onCancel, onRemove, onDownload }: TaskCardProps
 
   return (
     <div className={cn("rounded-xl border p-4 transition-all duration-200",
-      task.status === "completed"  && "border-green-200 bg-green-50/30 dark:border-green-800 dark:bg-green-950/20",
-      task.status === "failed"     && "border-red-200 bg-red-50/30 dark:border-red-800 dark:bg-red-950/20",
+      task.status === "completed" && "border-green-200 bg-green-50/30 dark:border-green-800 dark:bg-green-950/20",
+      task.status === "failed" && "border-red-200 bg-red-50/30 dark:border-red-800 dark:bg-red-950/20",
       task.status === "processing" && "border-blue-200 bg-blue-50/30 dark:border-blue-800 dark:bg-blue-950/20",
-      task.status === "queued"     && "border-muted bg-muted/30",
+      task.status === "queued" && "border-muted bg-muted/30",
     )}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0 space-y-1">

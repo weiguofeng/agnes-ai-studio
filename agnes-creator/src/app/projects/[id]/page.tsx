@@ -1,133 +1,341 @@
 "use client";
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useTranslation } from "@/i18n";
 import { useProjectStore } from "@/stores/projectStore";
-import { useStoryboardStore } from "@/stores/storyboardStore";
-import { usePromptStore } from "@/stores/promptStore";
 import { useCharacterStore } from "@/stores/characterStore";
-import { ArrowLeft, Plus, Film, Image, FileText, User, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, Save, Factory, User, Film } from "lucide-react";
+import type { Scene, Shot, ShotType, Character } from "@/types";
 
-export default function ProjectDetailPage() {
+// ─── Character multi-select ───
+function CharPicker({ value, onChange }: { value: string[]; onChange: (ids: string[]) => void }) {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
-  const { getProjectById, addSceneToProject, removeSceneFromProject } = useProjectStore();
-  const { scenes, addScene, removeScene } = useStoryboardStore();
-  const { prompts } = usePromptStore();
   const { characters } = useCharacterStore();
-  const project = getProjectById(id);
-  const projectScenes = scenes.filter((s) => s.projectId === id).sort((a, b) => a.order - b.order);
-  const [showAddScene, setShowAddScene] = useState(false);
-  const [newSceneTitle, setNewSceneTitle] = useState("");
-  const [newSceneDesc, setNewSceneDesc] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = characters.filter((c) => value.includes(c.id));
 
-  if (!project) return (
-    <AppShell>
-      <div className="text-center py-16">
-        <p className="text-muted-foreground">{t("project.notFound")}</p>
-        <Button variant="outline" className="mt-4" onClick={() => router.push("/projects")}>{t("common.back")}</Button>
-      </div>
-    </AppShell>
-  );
-
-  const handleAddScene = () => {
-    if (!newSceneTitle.trim()) return;
-    const sceneId = addScene({ title: newSceneTitle.trim(), description: newSceneDesc.trim(), order: projectScenes.length, projectId: id, prompt: "", renderedPrompt: "", characterIds: [], assetIds: [] });
-    const scene = scenes.find((s) => s.id === sceneId);
-    if (scene) addSceneToProject(id, scene);
-    setNewSceneTitle(""); setNewSceneDesc(""); setShowAddScene(false);
+  const toggle = (id: string) => {
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
   };
 
   return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-6 gap-1 text-[10px] px-2">
+          <Users className="h-2.5 w-2.5" />
+          {selected.length === 0 ? "角色" : selected.map((c) => c.name).join(", ")}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-2" align="start">
+        <div className="space-y-0.5 max-h-[180px] overflow-y-auto">
+          {characters.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-2">{t("project.noCharacters")}</p>
+          ) : (
+            characters.map((ch) => (
+              <label key={ch.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/[0.05] cursor-pointer text-xs">
+                <Checkbox checked={value.includes(ch.id)} onCheckedChange={() => toggle(ch.id)} className="h-3 w-3" />
+                <span>{ch.name}</span>
+              </label>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ─── Shot card ───
+function ShotRow({ shot, chars, onChange, onDelete }: {
+  shot: Shot; chars: Character[];
+  onChange: (patch: Partial<Shot>) => void;
+  onDelete: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 space-y-2">
+      {/* Line 1: type + duration + delete */}
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="text-[9px] h-4 shrink-0">{t("project.shot")}</Badge>
+        <select
+          value={shot.type}
+          onChange={(e) => onChange({ type: e.target.value as ShotType })}
+          className="h-6 rounded border border-input bg-transparent px-1 text-[10px] shrink-0"
+        >
+          <option value="image">{t("project.imageShort")}</option>
+          <option value="video">{t("project.videoShort")}</option>
+        </select>
+        <span className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+          <Input type="number" value={shot.duration}
+            onChange={(e) => onChange({ duration: Math.max(1, Number(e.target.value)) })}
+            className="h-5 w-12 text-[10px] text-center px-1" />s
+        </span>
+        <CharPicker value={shot.characterIds} onChange={(ids) => onChange({ characterIds: ids })} />
+        {shot.characterIds.map((cid) => {
+          const ch = chars.find((c) => c.id === cid);
+          return ch ? <Badge key={cid} variant="secondary" className="text-[8px] h-3.5 px-1">{ch.name}</Badge> : null;
+        })}
+        <Button variant="ghost" size="icon" className="h-5 w-5 ml-auto shrink-0 text-red-400/60 hover:text-red-400" onClick={onDelete}>
+          <Trash2 className="h-2.5 w-2.5" />
+        </Button>
+      </div>
+      {/* Description */}
+      <Textarea value={shot.description} onChange={(e) => onChange({ description: e.target.value })}
+        placeholder={t("project.shotDesc")} className="h-[52px] text-xs" />
+    </div>
+  );
+}
+
+// ─── Scene group ───
+function SceneGroup({ scene, index, chars, onRename, onDelete, onAddShot, onShotChange, onShotDelete }: {
+  scene: Scene; index: number; chars: Character[];
+  onRename: (title: string) => void;
+  onDelete: () => void;
+  onAddShot: () => void;
+  onShotChange: (shotId: string, patch: Partial<Shot>) => void;
+  onShotDelete: (shotId: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Card className="p-4 bg-white/[0.03] backdrop-blur-xl border-white/5 space-y-3">
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary" className="text-xs shrink-0">Sc {index + 1}</Badge>
+        <Input value={scene.title} onChange={(e) => onRename(e.target.value)}
+          placeholder={t("project.sceneTitle")} className="h-8 text-sm flex-1 min-w-0" />
+        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-red-400/60 hover:text-red-400" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {scene.shots.map((shot) => (
+        <ShotRow key={shot.id} shot={shot} chars={chars}
+          onChange={(patch) => onShotChange(shot.id, patch)}
+          onDelete={() => onShotDelete(shot.id)} />
+      ))}
+      <Button variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={onAddShot}>
+        <Plus className="h-3 w-3" /> {t("project.addShot")}
+      </Button>
+    </Card>
+  );
+}
+
+export default function ProjectDetailPage() {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const params = useParams();
+  const projectId = params?.id as string | undefined;
+
+  const { projects, updateProject } = useProjectStore();
+  const { characters } = useCharacterStore();
+
+  const project = projects.find((p) => p.id === projectId);
+  const [activeTab, setActiveTab] = useState("storyboard");
+
+  // ─── Local scenes state ───
+  const [localScenes, setLocalScenes] = useState<Scene[]>([]);
+
+  // Keep a ref always pointing to latest localScenes for save callback
+  const localRef = useRef(localScenes);
+  localRef.current = localScenes;
+
+  // Load from project on mount / project change
+  useEffect(() => {
+    if (project) setLocalScenes(JSON.parse(JSON.stringify(project.scenes || [])));
+  }, [project?.id]);
+
+  // Dirty check
+  const isDirty = useMemo(() => {
+    if (!project) return false;
+    return JSON.stringify(project.scenes || []) !== JSON.stringify(localScenes);
+  }, [project?.scenes, localScenes]);
+
+  // ─── Handlers (no useCallback to avoid closure issues) ───
+  const addScene = () => {
+    const now = Date.now();
+    const id = "scene-" + now + "-" + localScenes.length;
+    setLocalScenes((prev) => [...prev, {
+      id, projectId: projectId || "", title: "场景 " + (prev.length + 1), description: "",
+      order: prev.length, shots: [], prompt: "", renderedPrompt: "",
+      characterIds: [], assetIds: [], createdAt: now, updatedAt: now,
+    }]);
+  };
+
+  const renameScene = (sceneId: string, title: string) => {
+    setLocalScenes((prev) => prev.map((s) => s.id === sceneId ? { ...s, title, updatedAt: Date.now() } : s));
+  };
+
+  const deleteScene = (sceneId: string) => {
+    setLocalScenes((prev) => prev.filter((s) => s.id !== sceneId).map((s, i) => ({ ...s, order: i })));
+  };
+
+  const addShot = (sceneId: string) => {
+    const now = Date.now();
+    setLocalScenes((prev) => {
+      const sc = prev.find((s) => s.id === sceneId);
+      if (!sc) return prev;
+      const shotId = "shot-" + now + "-" + sc.shots.length;
+      const ns: Shot = {
+        id: shotId, sceneId, title: "", description: "", order: sc.shots.length,
+        type: "image", prompt: "", renderedPrompt: "", negativePrompt: "",
+        characterIds: [], assetIds: [], duration: 5, createdAt: now, updatedAt: now,
+      };
+      return prev.map((s) => s.id === sceneId ? { ...s, shots: [...s.shots, ns], updatedAt: now } : s);
+    });
+  };
+
+  const changeShot = (sceneId: string, shotId: string, patch: Partial<Shot>) => {
+    setLocalScenes((prev) => prev.map((s) => s.id === sceneId ? {
+      ...s, shots: s.shots.map((sh) => sh.id === shotId ? { ...sh, ...patch, updatedAt: Date.now() } : sh),
+      updatedAt: Date.now(),
+    } : s));
+  };
+
+  const removeShot = (sceneId: string, shotId: string) => {
+    setLocalScenes((prev) => prev.map((s) => s.id === sceneId ? {
+      ...s, shots: s.shots.filter((sh) => sh.id !== shotId).map((sh, i) => ({ ...sh, order: i })),
+      updatedAt: Date.now(),
+    } : s));
+  };
+
+  // ─── Save: read from ref to avoid stale closure ───
+  const handleSave = () => {
+    if (!projectId) return;
+    updateProject(projectId, { scenes: localRef.current });
+  };
+
+  const handleGoPipeline = () => {
+    handleSave();
+    router.push("/pipeline?projectId=" + projectId);
+  };
+
+  // ─── Guard ───
+  if (!project || !projectId) {
+    return (
+      <AppShell>
+        <div className="text-center py-16 text-muted-foreground">
+          <p>{t("project.notFound")}</p>
+          <Button variant="link" onClick={() => router.push("/projects")} className="mt-2">{t("project.backToList")}</Button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const linkedChars = characters.filter((c) => project.lockedCharacterIds.includes(c.id) || c.projectId === project.id);
+  const totalShots = localScenes.reduce((s, sc) => s + sc.shots.length, 0);
+
+  return (
     <AppShell>
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/projects")}><ArrowLeft className="h-5 w-5" /></Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{project.name}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => router.push("/storyboard/" + id)} className="gap-2">
-            <Film className="h-4 w-4" />{t("project.storyboard")}
-          </Button>
-        </div>
-        <div className="grid grid-cols-4 gap-4">
-          {[
-            { label: t("project.scenes"), value: projectScenes.length, icon: Film, color: "from-blue-500/20 to-cyan-500/20 text-blue-400" },
-            { label: t("project.shots"), value: projectScenes.reduce((s, sc) => s + sc.shots.length, 0), icon: Image, color: "from-purple-500/20 to-pink-500/20 text-purple-400" },
-            { label: t("project.prompts"), value: prompts.filter((p) => p.projectId === id).length, icon: FileText, color: "from-emerald-500/20 to-teal-500/20 text-emerald-400" },
-            { label: t("project.characters"), value: characters.filter((c) => c.projectId === id).length, icon: User, color: "from-orange-500/20 to-red-500/20 text-orange-400" }
-          ].map((stat) => (
-            <Card key={stat.label} className="p-4 bg-white/[0.03] backdrop-blur-xl border-white/5">
+      <div className="mx-auto max-w-4xl space-y-6">
+        {/* ─── Header ─── */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 min-w-0">
+            <Button variant="ghost" size="icon" onClick={() => router.push("/projects")}><ArrowLeft className="h-5 w-5" /></Button>
+            <div className="min-w-0">
               <div className="flex items-center gap-3">
-                <div className={"h-10 w-10 rounded-xl bg-gradient-to-br " + stat.color + " flex items-center justify-center"}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
+                <h1 className="text-2xl font-bold truncate">{project.name}</h1>
+                <Badge variant="outline" className="text-[10px]">{t("project.statuses." + project.status)}</Badge>
               </div>
-            </Card>
-          ))}
-        </div>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t("project.scenes")}</h2>
-            <Button size="sm" className="gap-2" onClick={() => setShowAddScene(true)}>
-              <Plus className="h-4 w-4" />{t("project.addScene")}
+              <p className="text-sm text-muted-foreground mt-0.5 truncate">{project.description}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleSave} disabled={!isDirty}>
+              <Save className="h-3.5 w-3.5" /> {t("common.save")}
+            </Button>
+            <Button size="sm" className="gap-1.5" onClick={handleGoPipeline}>
+              <Factory className="h-3.5 w-3.5" /> {t("project.goToPipeline")}
             </Button>
           </div>
-          {projectScenes.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground rounded-lg border border-dashed border-white/10">
-              <Film className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>{t("projectDetail.noScenes")}</p>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="overview">{t("project.overview")}</TabsTrigger>
+            <TabsTrigger value="storyboard">{t("project.storyboard")}</TabsTrigger>
+            <TabsTrigger value="settings">{t("project.settings")}</TabsTrigger>
+          </TabsList>
+
+          {/* ─── Overview ─── */}
+          <TabsContent value="overview" className="space-y-4 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="p-4 bg-white/[0.03] backdrop-blur-xl border-white/5">
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2"><Users className="h-4 w-4" /> {t("project.characters")}</h3>
+                {linkedChars.length === 0 ? <p className="text-xs text-muted-foreground">{t("project.noCharactersLinked")}</p> : (
+                  <div className="flex flex-wrap gap-2">{linkedChars.map((ch) => (<Badge key={ch.id} variant="secondary" className="text-xs gap-1"><User className="h-3 w-3" /> {ch.name}</Badge>))}</div>
+                )}
+              </Card>
+              <Card className="p-4 bg-white/[0.03] backdrop-blur-xl border-white/5">
+                <h3 className="text-sm font-medium mb-3">{t("project.stats")}</h3>
+                <div className="space-y-1.5 text-xs text-muted-foreground">
+                  <p>{t("project.scenes")}: {localScenes.length}</p>
+                  <p>{t("project.shots")}: {totalShots}</p>
+                  <p>{t("project.totalDuration")}: {localScenes.reduce((s, sc) => s + sc.shots.reduce((ss, sh) => ss + sh.duration, 0), 0)}s</p>
+                </div>
+              </Card>
             </div>
-          ) : projectScenes.map((scene, idx) => (
-            <Card key={scene.id} className="p-4 bg-white/[0.03] backdrop-blur-xl border-white/5">
-              <div className="flex items-start gap-4">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center text-sm font-bold text-blue-400 shrink-0">{idx + 1}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">{scene.title}</h3>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { removeScene(scene.id); removeSceneFromProject(id, scene.id); }}>
-                      <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                    </Button>
-                  </div>
-                  {scene.description && <p className="text-xs text-muted-foreground mt-1">{scene.description}</p>}
+          </TabsContent>
+
+          {/* ─── Storyboard ─── */}
+          <TabsContent value="storyboard" className="space-y-4 pt-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">{t("project.storyboardDesc")}</p>
+              <Button size="sm" className="gap-1.5" onClick={addScene}>
+                <Plus className="h-3.5 w-3.5" /> {t("project.addScene")}
+              </Button>
+            </div>
+
+            {localScenes.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground rounded-lg border border-dashed border-white/10">
+                <Film className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">{t("project.noScenes")}</p>
+                <p className="text-xs mt-1">{t("project.addSceneHint")}</p>
+                <Button variant="outline" size="sm" className="mt-4 gap-1.5" onClick={addScene}><Plus className="h-3.5 w-3.5" /> {t("project.addScene")}</Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {localScenes.map((scene, idx) => (
+                  <SceneGroup key={scene.id} scene={scene} index={idx} chars={characters}
+                    onRename={(title) => renameScene(scene.id, title)}
+                    onDelete={() => deleteScene(scene.id)}
+                    onAddShot={() => addShot(scene.id)}
+                    onShotChange={(shotId, patch) => changeShot(scene.id, shotId, patch)}
+                    onShotDelete={(shotId) => removeShot(scene.id, shotId)} />
+                ))}
+                <div className="flex justify-center gap-2 pt-2">
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={addScene}>
+                    <Plus className="h-3.5 w-3.5" /> {t("project.addScene")}
+                  </Button>
+                  <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={!isDirty}>
+                    <Save className="h-3.5 w-3.5" /> {t("common.save")} ({totalShots} {t("project.shots")})
+                  </Button>
                 </div>
               </div>
+            )}
+          </TabsContent>
+
+          {/* ─── Settings ─── */}
+          <TabsContent value="settings" className="space-y-4 pt-4">
+            <Card className="p-4 bg-white/[0.03] backdrop-blur-xl border-white/5 space-y-4">
+              <div className="space-y-2"><Label>{t("project.name")}</Label><Input value={project.name} onChange={(e) => updateProject(project.id, { name: e.target.value })} /></div>
+              <div className="space-y-2"><Label>{t("common.description")}</Label><Textarea value={project.description} onChange={(e) => updateProject(project.id, { description: e.target.value })} className="min-h-[60px]" /></div>
+              <div className="space-y-2"><Label>{t("project.status")}</Label>
+                <select value={project.status} onChange={(e) => updateProject(project.id, { status: e.target.value as any })} className="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+                  {["draft", "active", "completed", "archived"].map((s) => (<option key={s} value={s}>{t("project.statuses." + s)}</option>))}
+                </select>
+              </div>
             </Card>
-          ))}
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
-      <Dialog open={showAddScene} onOpenChange={setShowAddScene}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{t("storyboard.addScene")}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t("storyboard.sceneTitle")}</Label>
-              <Input value={newSceneTitle} onChange={(e) => setNewSceneTitle(e.target.value)} placeholder={t("storyboard.sceneTitle")} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("storyboard.sceneDesc")}</Label>
-              <Textarea value={newSceneDesc} onChange={(e) => setNewSceneDesc(e.target.value)} placeholder={t("storyboard.sceneDesc")} />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowAddScene(false)}>{t("common.cancel")}</Button>
-              <Button onClick={handleAddScene}>{t("common.create")}</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </AppShell>
   );
 }

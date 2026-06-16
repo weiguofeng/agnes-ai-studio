@@ -1,5 +1,6 @@
-﻿"use client";
-import { useState, useRef, useEffect, useCallback } from "react";
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,19 +9,34 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useTranslation } from "@/i18n";
 import { useEditorStore } from "@/stores/editorStore";
 import { useStoryboardStore } from "@/stores/storyboardStore";
-import { Play, Pause, Plus, Trash2, Film, Download, Import, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, Plus, Trash2, Film, Download, Import, SkipBack, SkipForward, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StorageService } from "@/services/StorageService";
-import { Upload, FileUp } from "lucide-react";
+
+type TimelineMatch = {
+  clip: any;
+  clipStart: number;
+  clipOffset: number;
+};
 
 function TimelineClip({ clip, totalDuration, isSelected, onClick, onDelete, onDragStart, onDragOver, onDrop, index }: any) {
   const pct = totalDuration > 0 ? (clip.duration / totalDuration) * 100 : 10;
+
   return (
     <div
       draggable
-      onDragStart={(e) => { e.dataTransfer.setData("text/clip-index", String(index)); onDragStart?.(); }}
-      onDragOver={(e) => { e.preventDefault(); onDragOver?.(); }}
-      onDrop={(e) => { e.preventDefault(); onDrop?.(index); }}
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/clip-index", String(index));
+        onDragStart?.();
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOver?.();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop?.(index);
+      }}
       className={cn(
         "relative shrink-0 h-full rounded-md border cursor-grab active:cursor-grabbing group transition-all",
         isSelected ? "border-purple-400 bg-purple-500/20" : "border-white/10 bg-white/[0.06] hover:bg-white/[0.1]"
@@ -45,43 +61,10 @@ function TimelineClip({ clip, totalDuration, isSelected, onClick, onDelete, onDr
       </div>
       <button
         className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100"
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-      >
-        <Trash2 className="h-2.5 w-2.5" />
-      </button>
-    </div>
-  );
-}
-
-function TimelineClip_old({ clip, totalDuration, isSelected, onClick, onDelete }: any) {
-  const pct = totalDuration > 0 ? (clip.duration / totalDuration) * 100 : 10;
-  return (
-    <div
-      className={cn(
-        "relative shrink-0 h-full rounded-md border cursor-pointer group transition-all",
-        isSelected ? "border-purple-400 bg-purple-500/20" : "border-white/10 bg-white/[0.06] hover:bg-white/[0.1]"
-      )}
-      style={{ width: Math.max(pct, 8) + "%", minWidth: "60px" }}
-      onClick={onClick}
-    >
-      <div className="h-full flex flex-col items-center justify-center p-1">
-        {clip.src ? (
-          clip.type === "video" ? (
-            <video src={clip.src} className="h-8 w-12 object-cover rounded" preload="metadata" />
-          ) : (
-            <img src={clip.src} alt="" className="h-8 w-12 object-cover rounded" />
-          )
-        ) : (
-          <div className="h-8 w-12 rounded bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-            <Film className="h-4 w-4 text-purple-400" />
-          </div>
-        )}
-        <p className="text-[9px] text-muted-foreground truncate w-full text-center mt-1">{clip.title}</p>
-        <span className="text-[8px] text-muted-foreground">{clip.duration.toFixed(1)}s</span>
-      </div>
-      <button
-        className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100"
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
       >
         <Trash2 className="h-2.5 w-2.5" />
       </button>
@@ -91,8 +74,7 @@ function TimelineClip_old({ clip, totalDuration, isSelected, onClick, onDelete }
 
 export default function EditorPage() {
   const { t } = useTranslation();
-  const store = useEditorStore();
-  const { timelines, activeTimelineId, setActiveTimeline, createTimeline, addClip, removeClip, getActiveTimeline, reorderClips } = store;
+  const { activeTimelineId, createTimeline, addClip, removeClip, getActiveTimeline, reorderClips } = useEditorStore();
   const scenes = useStoryboardStore().scenes;
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -100,239 +82,214 @@ export default function EditorPage() {
   const [showImport, setShowImport] = useState(false);
   const [dragClipIndex, setDragClipIndex] = useState<number | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const animRef = useRef(0);
   const startTimeRef = useRef(0);
-  // Use refs so async callbacks always see up-to-date values
+  const currentTimeRef = useRef(0);
   const isPlayingRef = useRef(false);
-  const playingLockedSrcRef = useRef<string | null>(null);
-  const playingClipRef = useRef<{ clip: any; clipStart: number; clipOffset: number } | null>(null);
-  // V2.6: Video cache to avoid re-decoding
-  const videoCacheRef = useRef<Map<string, string>>(new Map());
-  const getCachedUrl = useCallback((src: string) => {
-    if (videoCacheRef.current.has(src)) return videoCacheRef.current.get(src)!;
-    return src;
-  }, []);
-  const cacheVideoUrl = useCallback((src: string) => {
-    if (!videoCacheRef.current.has(src)) {
-      videoCacheRef.current.set(src, src);
-    }
-  }, []);
+  const playbackClipRef = useRef<TimelineMatch | null>(null);
 
   const activeTimeline = getActiveTimeline();
-  const totalDuration = activeTimeline?.clips.reduce((s, c) => s + c.duration, 0) || 0;
+  const totalDuration = activeTimeline?.clips.reduce((sum, clip) => sum + clip.duration, 0) || 0;
 
-  // ---- Determine clip at a given time ----
-  const getClipAtTime = useCallback((time: number) => {
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
+  const getClipAtTime = useCallback((time: number): TimelineMatch | null => {
     if (!activeTimeline) return null;
-    let acc = 0;
+    let accumulated = 0;
+
     for (const clip of activeTimeline.clips) {
-      if (time >= acc && time < acc + clip.duration) {
-        return { clip, clipStart: acc, clipOffset: time - acc };
+      if (time >= accumulated && time < accumulated + clip.duration) {
+        return { clip, clipStart: accumulated, clipOffset: time - accumulated };
       }
-      acc += clip.duration;
+      accumulated += clip.duration;
     }
+
     const last = activeTimeline.clips[activeTimeline.clips.length - 1];
-    return last ? { clip: last, clipStart: acc - last.duration, clipOffset: last.duration } : null;
+    return last ? { clip: last, clipStart: accumulated - last.duration, clipOffset: last.duration } : null;
   }, [activeTimeline]);
 
-  // ---- Currently displayed clip (preview / seek target) ----
-  const displayClip = selectedClipId
-    ? activeTimeline?.clips.find((c) => c.id === selectedClipId)
-    : getClipAtTime(currentTime)?.clip || null;
+  const displayClip = isPlaying && playbackClipRef.current
+    ? playbackClipRef.current.clip
+    : selectedClipId
+      ? activeTimeline?.clips.find((clip) => clip.id === selectedClipId)
+      : getClipAtTime(currentTime)?.clip || null;
 
-  // ---- Effective video source: locked during playback, follows displayClip otherwise ----
-  const effectiveVideoSrc = isPlaying && playingLockedSrcRef.current
-    ? playingLockedSrcRef.current
-    : (displayClip?.src || null);
+  const effectiveVideoSrc = displayClip?.src || null;
+  const effectiveVideoType = displayClip?.type || "video";
 
-  const effectiveVideoType = (isPlaying && playingClipRef.current)
-    ? playingClipRef.current.clip.type
-    : (displayClip?.type || "video");
+  const stopPlayback = useCallback(() => {
+    isPlayingRef.current = false;
+    playbackClipRef.current = null;
+    setIsPlaying(false);
+    cancelAnimationFrame(animRef.current);
+    if (videoRef.current) videoRef.current.pause();
+  }, []);
 
-  // ---- Play / Pause ----
-  const handlePlayPause = () => {
-    if (!activeTimeline || activeTimeline.clips.length === 0) return;
-
-    if (isPlayingRef.current) {
-      // Pause
-      isPlayingRef.current = false;
-      setIsPlaying(false);
-      playingLockedSrcRef.current = null;
-      playingClipRef.current = null;
-      cancelAnimationFrame(animRef.current);
-      if (videoRef.current) videoRef.current.pause();
-      return;
-    }
-
-    // Start playing
-    const match = getClipAtTime(currentTime);
-    if (!match || !match.clip.src) return;
-
-    isPlayingRef.current = true;
-    playingLockedSrcRef.current = match.clip.src;
-    playingClipRef.current = { clip: match.clip, clipStart: match.clipStart, clipOffset: match.clipOffset };
-    setIsPlaying(true);
-
-    if (match.clip.type !== "video") {
-      fallbackPlay(currentTime);
-      return;
-    }
-
-    // Video clip: the src is already set by React (effectiveVideoSrc = playingLockedSrcRef.current)
-    const v = videoRef.current;
-    if (!v) return;
-
-    // Attempt to play. If the video hasn't loaded, the canplay handler will retry.
-    v.currentTime = match.clipOffset || 0;
-    v.play().catch((err: unknown) => {
-      // Common reasons: video not loaded yet, or browser needs user gesture
-      console.warn("[Editor] Initial play() failed:", err?.constructor?.name || err);
-      // If it's a loading issue (NotSupportedError, AbortError), canplay will handle it
-    });
-  };
-
-  // ---- Animation fallback for image clips ----
-  const fallbackPlay = (fromTime: number) => {
+  const fallbackPlay = useCallback((fromTime: number) => {
+    cancelAnimationFrame(animRef.current);
     startTimeRef.current = performance.now() - fromTime * 1000;
+
     const loop = (now: number) => {
       if (!isPlayingRef.current) return;
-      const e = (now - startTimeRef.current) / 1000;
-      if (e >= totalDuration) {
+      const elapsed = (now - startTimeRef.current) / 1000;
+
+      if (elapsed >= totalDuration) {
+        currentTimeRef.current = totalDuration;
         setCurrentTime(totalDuration);
         isPlayingRef.current = false;
+        playbackClipRef.current = null;
         setIsPlaying(false);
-        playingLockedSrcRef.current = null;
-        playingClipRef.current = null;
         return;
       }
-      setCurrentTime(e);
+
+      currentTimeRef.current = elapsed;
+      setCurrentTime(elapsed);
       animRef.current = requestAnimationFrame(loop);
     };
+
     animRef.current = requestAnimationFrame(loop);
-  };
-
-  // ---- Video event: loaded & ready to play ----
-  const handleVideoCanPlay = useCallback(() => {
-    if (!isPlayingRef.current || !videoRef.current || !playingClipRef.current) return;
-    // Ensure the video is at the correct position and playing
-    videoRef.current.currentTime = playingClipRef.current.clipOffset || 0;
-    videoRef.current.play().catch((err: unknown) => {
-      console.warn("[Editor] canplay play() failed:", err?.constructor?.name || err);
-    });
-  }, []);
-
-  // ---- Video event: timeupdate ----
-  const handleTimeUpdate = useCallback(() => {
-    if (!isPlayingRef.current || !videoRef.current || !playingClipRef.current) return;
-    const pc = playingClipRef.current;
-    const ct = videoRef.current.currentTime;
-    const newTime = pc.clipStart + ct;
-    setCurrentTime(Math.min(newTime, totalDuration));
-
-    if (ct >= pc.clip.duration - 0.05 || newTime >= totalDuration - 0.01) {
-      advanceToNextClip(pc.clipStart + pc.clip.duration);
-    }
   }, [totalDuration]);
 
-  // ---- Video event: ended ----
-  const handleVideoEnded = useCallback(() => {
-    if (!playingClipRef.current) return;
-    advanceToNextClip(playingClipRef.current.clipStart + playingClipRef.current.clip.duration);
-  }, []);
-
-  // ---- Video event: error ----
-  const handleVideoError = useCallback(() => {
-    const ve = videoRef.current?.error;
-    if (!ve && !videoRef.current?.src) return;
-    console.warn("[Editor] Video error:", {
-      code: ve?.code,
-      message: ve?.message,
-      src: videoRef.current?.currentSrc || videoRef.current?.src,
-    });
-  }, []);
-
-  // ---- Advance to next clip ----
   const advanceToNextClip = useCallback((fromTime: number) => {
     if (!isPlayingRef.current) return;
 
     if (fromTime >= totalDuration - 0.01) {
+      currentTimeRef.current = totalDuration;
       setCurrentTime(totalDuration);
       isPlayingRef.current = false;
+      playbackClipRef.current = null;
       setIsPlaying(false);
-      playingLockedSrcRef.current = null;
-      playingClipRef.current = null;
       return;
     }
+
     const nextMatch = getClipAtTime(fromTime);
-    if (!nextMatch || !nextMatch.clip.src) {
-      isPlayingRef.current = false;
-      setIsPlaying(false);
-      playingLockedSrcRef.current = null;
-      playingClipRef.current = null;
+    if (!nextMatch?.clip.src) {
+      stopPlayback();
       return;
     }
-    playingClipRef.current = { clip: nextMatch.clip, clipStart: nextMatch.clipStart, clipOffset: 0 };
-    playingLockedSrcRef.current = nextMatch.clip.src;
+
+    playbackClipRef.current = { ...nextMatch, clipOffset: 0 };
+    currentTimeRef.current = fromTime;
+    setSelectedClipId(null);
     setCurrentTime(fromTime);
 
-    if (nextMatch.clip.type === "video" && videoRef.current) {
-      videoRef.current.src = nextMatch.clip.src;
-      videoRef.current.load();
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch((err: unknown) => {
-        console.warn("[Editor] Next clip play():", err?.constructor?.name || err);
-        isPlayingRef.current = false;
-        setIsPlaying(false);
-        playingLockedSrcRef.current = null;
-        playingClipRef.current = null;
-      });
-    } else {
-      isPlayingRef.current = false;
-      setIsPlaying(false);
-      playingLockedSrcRef.current = null;
-      playingClipRef.current = null;
+    if (nextMatch.clip.type !== "video") {
+      fallbackPlay(fromTime);
     }
-  }, [totalDuration, getClipAtTime]);
+  }, [fallbackPlay, getClipAtTime, stopPlayback, totalDuration]);
 
-  // ---- Seek ----
-  const seekTo = (time: number) => {
-    const t = Math.max(0, Math.min(time, totalDuration));
+  useEffect(() => {
+    if (!videoRef.current || effectiveVideoType !== "video") return;
+
+    const match = isPlayingRef.current
+      ? playbackClipRef.current
+      : getClipAtTime(currentTimeRef.current);
+
+    if (!match || match.clip.src !== effectiveVideoSrc) return;
+
+    videoRef.current.currentTime = Math.min(match.clipOffset || 0, Math.max(match.clip.duration - 0.05, 0));
+
     if (isPlayingRef.current) {
-      isPlayingRef.current = false;
-      setIsPlaying(false);
-      playingLockedSrcRef.current = null;
-      playingClipRef.current = null;
-      cancelAnimationFrame(animRef.current);
-      if (videoRef.current) videoRef.current.pause();
+      videoRef.current.play().catch((err: unknown) => {
+        console.warn("[Editor] play current clip failed:", err?.constructor?.name || err);
+        stopPlayback();
+      });
     }
-    setCurrentTime(t);
-    if (videoRef.current) {
-      const match = getClipAtTime(t);
-      if (match && match.clip.type === "video" && match.clip.src) {
-        videoRef.current.src = match.clip.src;
-        videoRef.current.currentTime = match.clipOffset;
-        videoRef.current.load();
-      }
+  }, [effectiveVideoSrc, effectiveVideoType, getClipAtTime, stopPlayback]);
+
+  const handlePlayPause = () => {
+    if (!activeTimeline || activeTimeline.clips.length === 0) return;
+
+    if (isPlayingRef.current) {
+      stopPlayback();
+      return;
+    }
+
+    const match = getClipAtTime(currentTimeRef.current);
+    if (!match?.clip.src) return;
+
+    isPlayingRef.current = true;
+    playbackClipRef.current = match;
+    setSelectedClipId(null);
+    setIsPlaying(true);
+
+    if (match.clip.type !== "video") {
+      fallbackPlay(currentTimeRef.current);
+      return;
+    }
+
+    if (videoRef.current && videoRef.current.currentSrc === match.clip.src) {
+      videoRef.current.currentTime = match.clipOffset || 0;
+      videoRef.current.play().catch((err: unknown) => {
+        console.warn("[Editor] Initial play() failed:", err?.constructor?.name || err);
+        stopPlayback();
+      });
     }
   };
 
-  // ---- Click clip ----
+  const handleTimeUpdate = useCallback(() => {
+    if (!isPlayingRef.current || !videoRef.current) return;
+    const match = playbackClipRef.current;
+    if (!match) return;
+
+    const videoTime = videoRef.current.currentTime;
+    const nextTimelineTime = Math.min(match.clipStart + videoTime, totalDuration);
+    currentTimeRef.current = nextTimelineTime;
+    setCurrentTime(nextTimelineTime);
+
+    if (videoTime >= match.clip.duration - 0.05 || nextTimelineTime >= totalDuration - 0.01) {
+      advanceToNextClip(match.clipStart + match.clip.duration);
+    }
+  }, [advanceToNextClip, totalDuration]);
+
+  const handleVideoEnded = useCallback(() => {
+    const match = playbackClipRef.current;
+    if (match) advanceToNextClip(match.clipStart + match.clip.duration);
+  }, [advanceToNextClip]);
+
+  const handleVideoError = useCallback(() => {
+    const videoError = videoRef.current?.error;
+    if (!videoError && !videoRef.current?.src) return;
+    console.warn("[Editor] Video error:", {
+      code: videoError?.code,
+      message: videoError?.message,
+      src: videoRef.current?.currentSrc || videoRef.current?.src,
+    });
+  }, []);
+
+  const seekTo = (time: number) => {
+    const targetTime = Math.max(0, Math.min(time, totalDuration));
+    if (isPlayingRef.current) stopPlayback();
+
+    currentTimeRef.current = targetTime;
+    setCurrentTime(targetTime);
+
+    const match = getClipAtTime(targetTime);
+    if (videoRef.current && match?.clip.type === "video") {
+      videoRef.current.currentTime = Math.min(match.clipOffset || 0, Math.max(match.clip.duration - 0.05, 0));
+    }
+  };
+
   const handleClipClick = (clipId: string) => {
     setSelectedClipId(clipId);
     if (!activeTimeline) return;
-    let acc = 0;
+
+    let accumulated = 0;
     for (const clip of activeTimeline.clips) {
       if (clip.id === clipId) {
-        seekTo(acc);
+        seekTo(accumulated);
         return;
       }
-      acc += clip.duration;
+      accumulated += clip.duration;
     }
   };
 
-  // ---- Timeline drag & drop ----
   const handleTimelineDragStart = useCallback((index: number) => {
     setDragClipIndex(index);
   }, []);
@@ -348,105 +305,115 @@ export default function EditorPage() {
       setDropTargetIndex(null);
       return;
     }
+
     const clips = [...activeTimeline.clips];
     const [moved] = clips.splice(dragClipIndex, 1);
     clips.splice(targetIndex, 0, moved);
-    reorderClips(activeTimeline.id, clips.map(c => c.id));
+    reorderClips(activeTimeline.id, clips.map((clip) => clip.id));
     setDragClipIndex(null);
     setDropTargetIndex(null);
-  }, [dragClipIndex, activeTimeline, reorderClips]);
+  }, [activeTimeline, dragClipIndex, reorderClips]);
 
-  // ---- Import scene ----
   const handleImportScene = (sceneId: string) => {
-    const scene = scenes.find((s) => s.id === sceneId);
+    const scene = scenes.find((candidate) => candidate.id === sceneId);
     if (!scene) return;
+
     const timelineId = createTimeline({
       name: scene.title,
       projectId: scene.projectId || "",
-      fps: 24, width: 1152, height: 768,
-      duration: scene.shots.reduce((s: number, shot: any) => s + (shot.duration || 3), 0),
+      fps: 24,
+      width: 1152,
+      height: 768,
+      duration: scene.shots.reduce((sum: number, shot: any) => sum + (shot.duration || 3), 0),
     });
+
     let currentStart = 0;
     for (const shot of scene.shots) {
-      const dur = shot.duration || 3;
+      const duration = shot.duration || 3;
       addClip(timelineId, {
         timelineId,
         source: { type: "shot", id: shot.id },
         type: shot.resultUrl ? "video" : "image",
         title: shot.title || "Shot",
         startTime: currentStart,
-        endTime: currentStart + dur,
-        duration: dur,
+        endTime: currentStart + duration,
+        duration,
         src: shot.resultUrl || undefined,
         properties: {},
       });
-      currentStart += dur;
+      currentStart += duration;
     }
+
     setSelectedClipId(null);
     setShowImport(false);
   };
 
-
-  // ---- Batch import from files (drag & drop + multi-select) ----
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dragOver, setDragOver] = useState(false);
-  
   const handleFileImport = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    let tlId = activeTimelineId || createTimeline({
+
+    const timelineId = activeTimelineId || createTimeline({
       name: "Import " + new Date().toLocaleTimeString(),
       projectId: "",
-      fps: 24, width: 1152, height: 768,
+      fps: 24,
+      width: 1152,
+      height: 768,
       duration: 0,
     });
+
     let currentStart = 0;
     for (const file of Array.from(files)) {
       try {
         const isVideo = file.type.startsWith("video/");
         const isImage = file.type.startsWith("image/");
         if (!isVideo && !isImage) continue;
+
         const type = isVideo ? "video" : "image";
         const blob = new Blob([file], { type: file.type });
-        const result = await StorageService.saveAssetFromBlob({
-          blob, type, projectId: "",
-        });
+        const result = await StorageService.saveAssetFromBlob({ blob, type, projectId: "" });
         if (!result.success) continue;
+
         const url = URL.createObjectURL(blob);
-        const dur = isVideo ? 5 : 3;
-        addClip(tlId, {
-          timelineId: tlId,
+        const duration = isVideo ? 5 : 3;
+        addClip(timelineId, {
+          timelineId,
           source: { type: "asset", id: result.data?.id || "" },
           type,
           title: file.name,
           startTime: currentStart,
-          endTime: currentStart + dur,
-          duration: dur,
+          endTime: currentStart + duration,
+          duration,
           src: url,
           properties: {},
         });
-        currentStart += dur;
-      } catch (e) {
-        console.error("Import error:", e);
+        currentStart += duration;
+      } catch (error) {
+        console.error("Import error:", error);
       }
     }
+
     setSelectedClipId(null);
     setShowImport(false);
-  }, [activeTimelineId, createTimeline, addClip]);
-  
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setDragOver(true);
+  }, [activeTimelineId, addClip, createTimeline]);
+
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragOver(true);
   }, []);
-  
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setDragOver(false);
+
+  const handleDragLeave = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragOver(false);
   }, []);
-  
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setDragOver(false);
-    handleFileImport(e.dataTransfer.files);
+
+  const handleDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragOver(false);
+    handleFileImport(event.dataTransfer.files);
   }, [handleFileImport]);
 
-  // ---- Cleanup ----
   useEffect(() => {
     return () => {
       cancelAnimationFrame(animRef.current);
@@ -496,8 +463,6 @@ export default function EditorPage() {
                     className="max-h-full max-w-full object-contain"
                     preload="auto"
                     playsInline
-                    crossOrigin="anonymous"
-                    onCanPlay={handleVideoCanPlay}
                     onTimeUpdate={handleTimeUpdate}
                     onEnded={handleVideoEnded}
                     onError={handleVideoError}
@@ -513,7 +478,7 @@ export default function EditorPage() {
               )}
               <div className="absolute bottom-3 left-3 bg-black/60 px-2 py-1 rounded text-xs text-white/80">
                 {activeTimeline.width}x{activeTimeline.height} @ {activeTimeline.fps}fps
-                {isPlaying && <span className="ml-2 text-green-400">▶ Playing</span>}
+                {isPlaying && <span className="ml-2 text-green-400">{t("editor.playing")}</span>}
               </div>
             </Card>
 
@@ -541,7 +506,7 @@ export default function EditorPage() {
                   value={[currentTime]}
                   max={Math.max(totalDuration, 1)}
                   step={0.1}
-                  onValueChange={([v]) => seekTo(v)}
+                  onValueChange={([value]) => seekTo(value)}
                   className="cursor-pointer"
                 />
               </div>
@@ -554,14 +519,21 @@ export default function EditorPage() {
                 </div>
               ) : (
                 <div className="h-full flex gap-1 overflow-x-auto pb-2">
-                  {activeTimeline.clips.map((clip: any, idx: number) => (
+                  {activeTimeline.clips.map((clip: any, index: number) => (
                     <TimelineClip
                       key={clip.id}
                       clip={clip}
                       totalDuration={totalDuration}
                       isSelected={selectedClipId === clip.id}
+                      index={index}
                       onClick={() => handleClipClick(clip.id)}
-                      onDelete={() => { removeClip(activeTimeline.id, clip.id); setSelectedClipId(null); }}
+                      onDelete={() => {
+                        removeClip(activeTimeline.id, clip.id);
+                        setSelectedClipId(null);
+                      }}
+                      onDragStart={() => handleTimelineDragStart(index)}
+                      onDragOver={() => handleTimelineDragOver(index)}
+                      onDrop={() => handleTimelineDrop(index)}
                     />
                   ))}
                 </div>
@@ -575,33 +547,36 @@ export default function EditorPage() {
             <DialogHeader>
               <DialogTitle>{t("editor.sceneImport")}</DialogTitle>
             </DialogHeader>
-            {/* File import zone */}
-                            <div
-                              onDragOver={handleDragOver}
-                              onDragLeave={handleDragLeave}
-                              onDrop={handleDrop}
-                              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${dragOver ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground"}`}
-                              onClick={() => fileInputRef.current?.click()}
-                            >
-                              <input
-                                ref={fileInputRef}
-                                type="file"
-                                multiple
-                                accept="image/*,video/*"
-                                className="hidden"
-                                onChange={(e) => handleFileImport(e.target.files)}
-                              />
-                              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                              <p className="text-sm font-medium">{t("editor.importLabel")}</p>
-                              <p className="text-xs text-muted-foreground mt-1">Click or drag & drop images/videos</p>
-                            </div>
-                
-                            {/* Separator */}
-                            <div className="relative">
-                              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                              <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or import from scenes</span></div>
-                            </div>
-                
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={cn(
+                "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
+                dragOver ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground"
+              )}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={(event) => handleFileImport(event.target.files)}
+              />
+              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm font-medium">{t("editor.importLabel")}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("editor.fileImportHint")}</p>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">{t("editor.sceneImportSeparator")}</span>
+              </div>
+            </div>
+
             <div className="space-y-3 max-h-60 overflow-y-auto">
               {scenes.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">{t("editor.noScenes")}</p>
@@ -629,4 +604,3 @@ export default function EditorPage() {
     </AppShell>
   );
 }
-

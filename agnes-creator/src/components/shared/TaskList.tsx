@@ -69,7 +69,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
   const label = TYPE_LABEL[task.type] || task.type;
   const timeStr = new Date(task.createTime).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 
-  // 进度标签（不显示百分比）
   const statusLabel =
     task.status === "queued" ? "排队中" :
     task.status === "submitted" ? "已提交，等待处理" :
@@ -78,7 +77,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
     task.status === "uploading" ? "上传中" :
     task.status === "awaiting_asset" ? "同步文件中" : "";
 
-  // 仅当 processing 且 progress>0 时显示进度条
   const showProgressBar = task.status === "processing" && task.progress > 0;
 
   const borderColor =
@@ -115,7 +113,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
         </div>
       </div>
 
-      {/* progress > 0 时显示进度条 */}
       {showProgressBar && (
         <div className="mt-3 space-y-1.5">
           <div className="flex items-center justify-between text-xs">
@@ -129,7 +126,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
         </div>
       )}
 
-      {/* 排队/已提交/限流/处理中(无进度) — 仅显示文字 */}
       {isProgressing(task.status) && !showProgressBar && (
         <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="h-3.5 w-3.5 animate-pulse" />
@@ -137,7 +133,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
         </div>
       )}
 
-      {/* 源图片 */}
       {showThumbnail && task.thumbnail && task.status !== "completed" && (
         <div className="mt-3 flex items-center gap-3 rounded-lg bg-muted/30 p-2">
           <div className="shrink-0 h-14 w-14 rounded-lg overflow-hidden bg-muted">
@@ -147,7 +142,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
         </div>
       )}
 
-      {/* 结果预览 */}
       {task.status === "completed" && task.resultUrl && (
         <div className="mt-3 space-y-3">
           {task.type.includes("video") ? (
@@ -181,7 +175,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
         </div>
       )}
 
-      {/* 错误信息 */}
       {(task.status === "failed" || task.status === "timeout") && task.errorMessage && (
         <div className="mt-3 flex items-start gap-2 rounded-md bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
           <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
@@ -189,7 +182,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
         </div>
       )}
 
-      {/* rate_limited 提示 */}
       {task.status === "rate_limited" && task.errorMessage && (
         <div className="mt-3 flex items-start gap-2 rounded-md bg-orange-50 p-2.5 text-xs text-orange-700 dark:bg-orange-950 dark:text-orange-300">
           <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
@@ -197,7 +189,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
         </div>
       )}
 
-      {/* 操作按钮 */}
       {(task.status === "failed" || task.status === "timeout") && (
         <div className="mt-2 flex gap-1">
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={handleRetry}>
@@ -208,10 +199,6 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
     </div>
   );
 }
-
-// ============================================================
-// TaskList
-// ============================================================
 
 interface TaskListProps {
   tasks: UnifiedTask[];
@@ -260,10 +247,6 @@ export function TaskList({
   );
 }
 
-// ============================================================
-// TaskStats
-// ============================================================
-
 export function TaskStats({ tasks }: { tasks: UnifiedTask[] }) {
   const completed = tasks.filter((t) => t.status === "completed").length;
   const failed = tasks.filter((t) => t.status === "failed" || t.status === "timeout").length;
@@ -277,5 +260,3 @@ export function TaskStats({ tasks }: { tasks: UnifiedTask[] }) {
     </div>
   );
 }
-
-

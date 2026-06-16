@@ -4,8 +4,10 @@
 import { useProjectStore } from "@/stores/projectStore";
 import { useProductionQueue } from "@/stores/productionQueueStore";
 import { useEditorStore } from "@/stores/editorStore";
+import { usePromptHistoryStore } from "@/stores/promptHistoryStore";
+import { AssetsDB, type AssetRecord } from "./AssetsDB";
 import { logger } from "@/lib/logger";
-import type { ProjectBackup } from "./BackupService";
+import type { ProjectBackup, ProjectBackupAsset } from "./BackupService";
 
 export interface RestoreResult {
   success: boolean;
@@ -13,6 +15,48 @@ export interface RestoreResult {
   failedItems: string[];
   warnings: string[];
   error?: string;
+}
+
+function storeNameForAsset(type: AssetRecord["type"]): "images" | "videos" | "thumbnails" {
+  return type === "video" ? "videos" : type === "thumbnail" ? "thumbnails" : "images";
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [meta, b64] = dataUrl.split(",");
+  const mimeType = meta.match(/:(.*?);/)?.[1] ?? "application/octet-stream";
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mimeType });
+}
+
+async function restoreAssets(assets: ProjectBackupAsset[], result: RestoreResult): Promise<void> {
+  for (const asset of assets || []) {
+    const { dataUrl, ...record } = asset;
+    try {
+      if (!dataUrl) {
+        await AssetsDB.saveMeta({ ...record, status: "missing", integrityStatus: "failed", updatedAt: Date.now() });
+        result.warnings.push(`asset:${record.id}:missing-binary`);
+        continue;
+      }
+      const blob = dataUrlToBlob(dataUrl);
+      await AssetsDB.save(storeNameForAsset(record.type), record.id, blob);
+      await AssetsDB.saveMeta({
+        ...record,
+        url: typeof URL !== "undefined" && typeof URL.createObjectURL === "function" ? URL.createObjectURL(blob) : record.url,
+        status: "active",
+        fileSize: blob.size,
+        mimeType: record.mimeType || blob.type,
+        integrityStatus: "pending",
+        integrityCheckedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      result.restoredItems.push(`asset:${record.id.slice(-8)}`);
+    } catch (err) {
+      result.failedItems.push(`asset:${record.id}`);
+      result.warnings.push(`asset:${record.id}:${String(err)}`);
+    }
+  }
 }
 
 /** 恢复项目 */
@@ -33,6 +77,7 @@ export async function restoreProject(backup: ProjectBackup): Promise<RestoreResu
         styleDna: backup.project.styleDna,
         lockedCharacterIds: backup.project.lockedCharacterIds,
         scenes: backup.project.scenes,
+        storyScript: backup.project.storyScript || "",
       });
       result.restoredItems.push("project");
     } else {
@@ -42,11 +87,13 @@ export async function restoreProject(backup: ProjectBackup): Promise<RestoreResu
         name: backup.project.name,
         description: backup.project.description,
         tags: backup.project.tags,
+        storyScript: backup.project.storyScript || "",
       });
       projectStore.updateProject(backup.project.id, {
         styleDna: backup.project.styleDna,
         lockedCharacterIds: backup.project.lockedCharacterIds,
         scenes: backup.project.scenes,
+        storyScript: backup.project.storyScript || "",
       });
       result.restoredItems.push("project(new)");
     }
@@ -54,24 +101,25 @@ export async function restoreProject(backup: ProjectBackup): Promise<RestoreResu
     // 2. 恢复生产队列
     const queueStore = useProductionQueue.getState();
     if (backup.productionQueue && backup.productionQueue.length > 0) {
-      // 清除旧队列项
       queueStore.clearProject(backup.project.id);
-      // 逐个恢复
-      for (const item of backup.productionQueue) {
-        queueStore.updateItem(item.shotId, item);
-        result.restoredItems.push(`queue:${item.shotId.slice(-8)}`);
-      }
+      useProductionQueue.setState((state) => ({
+        items: [
+          ...backup.productionQueue,
+          ...state.items.filter((item) => item.projectId !== backup.project.id),
+        ],
+      }));
+      for (const item of backup.productionQueue) result.restoredItems.push(`queue:${item.shotId.slice(-8)}`);
     }
 
     // 3. 恢复时间轴
     const editorStore = useEditorStore.getState();
     if (backup.timeline && backup.timeline.length > 0) {
-      // 清除旧时间线
-      const existingTimelines = editorStore.timelines.filter(t => t.projectId === backup.project.id);
-      for (const t of existingTimelines) {
-        // Use store method to update existing timelines
-      }
-      // 恢复时间线（通过 store 重建）
+      useEditorStore.setState((state) => ({
+        timelines: state.timelines.filter((timeline) => timeline.projectId !== backup.project.id),
+        activeTimelineId: state.activeTimelineId && state.timelines.some((timeline) => timeline.id === state.activeTimelineId && timeline.projectId === backup.project.id)
+          ? null
+          : state.activeTimelineId,
+      }));
       for (const tl of backup.timeline) {
         const newId = editorStore.createTimeline({
           name: tl.name,
@@ -98,6 +146,15 @@ export async function restoreProject(backup: ProjectBackup): Promise<RestoreResu
         result.restoredItems.push(`timeline:${tl.name}`);
       }
     }
+
+    if (backup.promptHistory) {
+      usePromptHistoryStore.setState((state) => ({
+        history: { ...(state.history || {}), ...backup.promptHistory },
+      }));
+      result.restoredItems.push("promptHistory");
+    }
+
+    await restoreAssets(backup.assets || [], result);
 
     result.success = true;
     logger.info("Restore", `项目恢复完成: ${result.restoredItems.length} 项`);

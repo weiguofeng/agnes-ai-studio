@@ -1,13 +1,14 @@
-"use client";
+﻿"use client";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/i18n";
-import { Image, Video, Lock, Trash2, Eye, RefreshCw, Clock, Play } from "lucide-react";
+import { Image, Video, Lock, Trash2, Eye, RefreshCw, Clock, Play, Users } from "lucide-react";
 import type { ProductionQueueItem } from "@/types";
 import { PromptInlineEditor } from "./PromptInlineEditor";
 import { AssetPreview } from "./AssetPreview";
+import { VideoDurationSelector } from "./VideoDurationSelector";
 
 interface QueueCardViewProps {
   items: ProductionQueueItem[];
@@ -26,6 +27,10 @@ interface QueueCardViewProps {
   onSavePrompt: (shotId: string, prompt: string) => void;
   getImageUrl: (shotId: string) => string | undefined;
   getVideoUrl: (shotId: string) => string | undefined;
+  /** V2.9: Update video duration (in frames) */
+  onUpdateVideoDuration?: (shotId: string, frames: number) => void;
+  /** V2.9: Map of shotId -> number of character images available */
+  shotCharImageCounts?: Record<string, number>;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -49,6 +54,7 @@ export function QueueCardView({
   items, selectedIds, onToggleSelect, onGenerateImage, onGenerateVideo,
   onRegenImage, onRegenVideo, onLockImage, onUnlockImage, onLockVideo, onUnlockVideo,
   onDeleteImage, onDeleteVideo, onSavePrompt, getImageUrl, getVideoUrl,
+  onUpdateVideoDuration, shotCharImageCounts,
 }: QueueCardViewProps) {
   const { t } = useTranslation();
   const [previewType, setPreviewType] = useState<"image" | "video" | null>(null);
@@ -95,7 +101,7 @@ export function QueueCardView({
             <Video className="h-3 w-3 mr-0.5" />{t("pipeline.generateVideo")}
           </Button>
         )}
-        {hasVideo && !isVideoGenerating && (
+        {hasVideo && (
           <Button variant="outline" size="sm" className="h-6 text-[10px] px-1.5" onClick={() => onRegenVideo(item.shotId)}>
             <RefreshCw className="h-3 w-3 mr-0.5" />{t("pipeline.regenVideo")}
           </Button>
@@ -109,7 +115,7 @@ export function QueueCardView({
             <Lock className="h-3 w-3 mr-0.5" />{t("pipeline.lockImage")}
           </Button>
         )}
-        {hasVideo && (isVideoLocked ? (
+        {isVideoLocked ? (
           <Button variant="ghost" size="sm" className="h-6 text-[10px] px-1.5" onClick={() => onUnlockVideo(item.shotId)}>
             <Lock className="h-3 w-3 mr-0.5" />{t("pipeline.unlockVideo")}
           </Button>
@@ -117,7 +123,7 @@ export function QueueCardView({
           <Button variant="ghost" size="sm" className="h-6 text-[10px] px-1.5" onClick={() => onLockVideo(item.shotId)}>
             <Lock className="h-3 w-3 mr-0.5" />{t("pipeline.lockVideo")}
           </Button>
-        ))}
+        )}
         {hasImage && (
           <Button variant="ghost" size="sm" className="h-6 text-[10px] px-1.5 text-red-500" onClick={() => onDeleteImage(item.shotId)}>
             <Trash2 className="h-3 w-3 mr-0.5" />{t("pipeline.deleteImage")}
@@ -139,6 +145,7 @@ export function QueueCardView({
           const imgUrl = getImageUrl(item.shotId);
           const vidUrl = getVideoUrl(item.shotId);
           const fullPrompt = item.customPrompt || item.videoPrompt || item.imagePrompt || item.shotTitle || item.sceneTitle;
+          const charImageCount = shotCharImageCounts?.[item.shotId] || 0;
           return (
             <Card key={item.shotId} className={`relative ${selectedIds.includes(item.shotId) ? "ring-2 ring-primary" : ""}`}>
               <CardContent className="p-3 space-y-2">
@@ -188,6 +195,22 @@ export function QueueCardView({
                   defaultPrompt={fullPrompt || item.shotTitle || ""}
                   onSave={(prompt) => onSavePrompt(item.shotId, prompt)}
                 />
+
+                {/* V2.9: Multi-character badge */}
+                {charImageCount > 1 && (
+                  <div className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 rounded px-1.5 py-0.5">
+                    <Users className="h-3 w-3" />
+                    {charImageCount} {t("pipeline.multiImage")}
+                  </div>
+                )}
+
+                {/* V2.9: Video duration selector */}
+                {onUpdateVideoDuration && (
+                  <VideoDurationSelector
+                    currentFrames={item.videoDurationFrames}
+                    onChange={(frames) => onUpdateVideoDuration(item.shotId, frames)}
+                  />
+                )}
 
                 {(item.imageStartedAt || item.videoStartedAt) && (
                   <div className="text-[10px] text-muted-foreground flex items-center gap-1">

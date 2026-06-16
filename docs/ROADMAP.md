@@ -1,77 +1,121 @@
 # Agnes AI Studio Roadmap
 
-## V2.4 (已完成)
+## V2.4 (Completed)
+
 ### Character Consistency Pipeline
-- ✅ Character DNA, Reference, Lock
-- ✅ Batch Video Generation, Production Queue
-- ✅ URL 诊断, 服务端代理, 指数退避重试
+
+- Character DNA, reference, and lock support
+- Batch video generation and production queue
+- URL diagnostics, server proxy, and retry strategy
 
 ---
 
 ## V2.5
+
 ### Automation
-- 自动图片生成, 自动视频生成, 自动字幕生成, 自动封面生成
+
+- Automatic image generation
+- Automatic video generation
+- Automatic subtitle generation
+- Automatic cover generation
 
 ---
 
 ## V2.6
+
 ### AI Production Studio
-- 一键生成完整项目, 批量项目生产, 多项目队列, 云端任务调度
+
+- One-click full project generation
+- Batch project production
+- Multi-project queue
+- Cloud task scheduling
 
 ---
 
-## V2.7 (已完成)
+## V2.7 (Completed)
+
 ### Production Dashboard Upgrade
-- ✅ 双栏布局, 统计面板, 镜头卡片, Prompt 编辑器
-- ✅ 素材预览, 批量操作, 时间轴导入, 存储监控, 生产模式, 实时任务
+
+- Dual-column layout, statistics panel, shot cards, prompt editor
+- Asset preview, batch actions, timeline import, storage monitor, production mode, live tasks
 
 ---
 
-## V2.8 (已完成)
-### Production Hardening
-- ✅ 自动保存系统 (30s + 关键操作 + 页面关闭兜底)
-- ✅ Prompt 历史持久化 (IndexedDB, 50 版本/镜头)
-- ✅ 资源永久存储 (始终保存 Blob, 保存 originalUrl)
-- ✅ 资源完整性检查 (Blob 验证 + 状态标记)
-- ✅ 安全清理 (三级确认: 预览 -> 输入 DELETE -> 执行)
-- ✅ 项目备份系统 (导出 .project.json)
-- ✅ 项目恢复系统 (导入 + 校验)
-- ✅ 恢复中心 (/recovery 页面)
-- ✅ IndexedDB 优化 (新增 sceneId, integrityStatus 索引)
-- ✅ 单元测试 (9 项)
+## V2.8 (Completed)
 
-## V2.8.1 (已完成)
+### Production Hardening
+
+- Auto-save system
+- Prompt history persistence
+- Permanent asset Blob storage
+- Asset integrity checks
+- Safe cleanup flow
+- Project backup and restore
+- Recovery center
+- IndexedDB optimization
+- Unit tests
+
+---
+
+## V2.8.1 (Completed)
+
 ### Pipeline UX & Recovery Hardening
-- ✅ 图生视频任务状态流加固：禁止任务创建成功即 completed，必须轮询到真实视频 URL
-- ✅ 首页、恢复中心、清理确认和视频错误提示补齐 zh-CN / en-US
-- ✅ StorageMonitor 三级安全清理 UI 落地
-- ✅ AppShell / Sidebar / Pipeline 响应式修复，移动端改单栏和横向导航
-- ✅ QueueCardView 补齐视频锁定、解锁、删除操作入口
-- ✅ PromptInlineEditor 修复空历史 selector 不稳定导致的 React 19 最大更新深度崩溃
-- ✅ PromptPack 生成兼容旧镜头数据，缺失 characterIds 时不再抛错
-- ✅ 生产流水线生成时 sceneId/shot.sceneId 使用同一时间戳，保持引用一致
-- ✅ 生产队列批量生成图片修复：改为调用文本生图 API，并补充回归测试
-- ✅ 生产队列批量生成视频修复：代理读取图片、实时任务入队、缺图项明确失败
-- ✅ 生产队列 Prompt 完整性修复：编辑 Prompt 展示完整图像/视频 Prompt，保障图像质量
-- ✅ Agnes 视频轮询 ID 修复：优先使用 `video_id`，避免 `/agnesapi?video_id=task_*` 404
-- ✅ 批量暂停/终止修复：选中生成任务会取消本地轮询和实时任务状态
-- ✅ 存储监控项目级统计修复：按当前项目 active 图片/视频和队列结果 URL 去重
-- ✅ 项目故事脚本恢复：选择项目自动带入上一次编辑的故事脚本
+
+- Image-to-video task flow requires real video URL before completion
+- zh-CN / en-US copy completed for homepage, recovery center, cleanup confirmation, and video error states
+- StorageMonitor safe cleanup UI completed
+- AppShell / Sidebar / Pipeline responsive layout improved
+- QueueCardView image/video lock, unlock, and delete actions completed
+- PromptInlineEditor empty-history selector crash fixed
+- PromptPack generation supports legacy shot data
+- Scene and shot IDs stay consistent during pipeline generation
+- Production queue batch image generation fixed
+- Production queue batch image-to-video fixed
+- Production queue prompt completeness fixed
+- Agnes video polling prefers `video_id`
+- Batch pause / terminate cancels local polling and live task status
+- Storage monitor project-level statistics fixed
+- Project story script recovery fixed
+- StorageService remote asset persistence now falls back to the server download proxy when direct browser fetch fails
+- Timeline import creates a project-scoped editor timeline when no active timeline exists
+- Timeline import reuses only timelines belonging to the selected project
+- Timeline import localizes remote video/image URLs into playable Blob URLs before adding clips
+- Editor video playback no longer requires CORS by default for ordinary video preview
+- Agnes video polling handles 429 / rate-limit responses with stronger backoff instead of failing the task
+- Closed-loop QA scripts, test plan, report template, and regression coverage added for story-to-export quality gates
+- Pending image-to-video queue candidates now require a completed image and real image URL
+- Lint gate migrated from deprecated `next lint` to ESLint CLI for source files
+- ESLint JSON report script added for warning baseline tracking
+- Next build lint phase disabled so build and lint gates stay separate
 
 ---
 
 ## V2.9
+
 ### Quality Gate Cleanup
-- 清理历史 ESLint warnings，并迁移 Next lint 到 ESLint CLI
-- 增加 i18n key 泄漏和新 UI 硬编码扫描
-- 增加图生视频 create -> poll -> complete 的 mock E2E 覆盖
-- 增加移动端主页面无横向滚动的 Playwright 检查
-- 增加生产流水线故事生成与队列渲染的 Playwright 回归用例
-- 增加 Agnes 404 / task not found 的端到端错误恢复检查
+
+- Clean historical ESLint warnings and enforce warning baseline tracking
+- Add i18n key annotation and hardcoded UI string scanning
+- Add mock E2E coverage for image-to-video create -> poll -> complete
+- Add Playwright mobile checks for no horizontal overflow
+- Add Playwright regression for production pipeline story generation and queue rendering
+- Add Agnes 404 / task-not-found end-to-end recovery checks
+- Add full browser regression for timeline import into a newly created editor timeline
+- Automate closed-loop report generation from local QA command output
+- Document dev startup recovery and related accessibility verification
 
 ---
 
 ## V3.0
+
 ### Story To Final Video
-目标: 输入故事 -> 自动生成: 角色, 分镜, Prompt, 图片, 视频, 字幕, 封面, 最终视频
-关键技术: AI 字幕生成, 云端任务调度, 多项目队列, Service Worker 缓存, 资源去重
+
+Target: input story -> automatically generate characters, storyboard, prompts, images, videos, subtitles, cover, and final video.
+
+Key areas:
+
+- AI subtitle generation
+- Cloud task scheduling
+- Multi-project queue
+- Service Worker cache
+- Asset deduplication

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="9ac478b8-d13b-4e68-924d-7da1cc524719" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.next/trace" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/next.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/next.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/app/editor/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/app/editor/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/app/image-to-video/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/app/image-to-video/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/app/pipeline/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/app/pipeline/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/app/projects/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/app/projects/[id]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/components/generation/TaskCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/components/generation/TaskCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/components/layout/Sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/components/layout/Sidebar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/components/shared/TaskList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/components/shared/TaskList.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/i18n/en-US.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/i18n/en-US.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/i18n/zh-CN.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/i18n/zh-CN.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/services/BackupService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/services/BackupService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/services/RestoreService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/services/RestoreService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/services/StorageService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/services/StorageService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/services/agnes/video.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/services/agnes/video.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/stores/productionQueueStore.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/stores/productionQueueStore.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/src/stores/projectStore.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/src/stores/projectStore.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/tests/unit/productionHardening.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/tests/unit/productionHardening.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-creator/tests/unit/productionQueueVideoWorkflow.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/agnes-creator/tests/unit/productionQueueVideoWorkflow.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-doc-raw.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/agnes-doc-titles.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dev-server.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver2.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver2_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver3.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver3_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver4.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver4_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver_3000.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver_3000_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver_3003.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver_3003_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/devserver_out.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ASSET_BROWSER_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ASSET_INTEGRITY_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ASSET_MANAGEMENT_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ASSET_STORAGE_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/AUTO_SAVE_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/BACKUP_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/CHANGELOG.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/DISASTER_RECOVERY_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/EDITOR_IMPORT_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/EDITOR_TEST_MODE_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/INDEXEDDB_OPTIMIZATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/LONG_RUNNING_PRODUCTION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/MEMORY_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/PIPELINE_SCENE_CONTROL_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/PROJECT_CONTEXT.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/PROJECT_CONTEXT.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/PROMPT_HISTORY_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/RECOVERY_CENTER_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/RESTORE_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ROADMAP.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ROADMAP.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/SAFE_CLEANUP_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/SCENE_STATUS_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/STORAGE_REFACTOR_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/V2.5_FEATURE_VERIFICATION_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/V2.6_PRODUCTION_EXPERIENCE_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/V2.7_PRODUCTION_DASHBOARD_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/V2.8_PRODUCTION_HARDENING_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/playwright_install.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/playwright_install_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver_3000.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver_3000_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver_3001.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver_3001_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver_3002.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver_3002_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver_err.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver_inspect.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prodserver_inspect_err.log" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="customMavenHome" value="D:/apache-maven-3.3.9" />
+        <option name="localRepository" value="D:\maven-space" />
+        <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
+        <option name="userSettingsFile" value="D:\apache-maven-3.3.9\conf\settings.xml" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 2
+}]]></component>
+  <component name="ProjectId" id="3FCJHeZjBjFhMzctVNemryQkHSC" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "E:/codex-project-source/agnes-ai-studio",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "ts.external.directory.path": "E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RebelAgentSelection">
+    <selection>jr</selection>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9f38398b9061-18abd8497189-intellij.indexing.shared.core-IU-241.14494.240" />
+        <option value="bundled-js-predefined-1d06a55b98c1-74d2a5396914-JavaScript-IU-241.14494.240" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="SvnConfiguration">
+    <configuration>C:\Users\Lenovo\AppData\Roaming\Subversion</configuration>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="9ac478b8-d13b-4e68-924d-7da1cc524719" name="Changes" comment="" />
+      <created>1781573044451</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1781573044451</updated>
+      <workItem from="1781573045023" duration="2138000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

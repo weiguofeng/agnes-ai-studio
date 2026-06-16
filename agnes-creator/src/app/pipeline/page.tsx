@@ -5,14 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Download, CheckCircle2, Loader2, Sparkles, Users, BookTemplate, FileJson, FileText, Archive, LayoutDashboard,
+  Download, CheckCircle2, Loader2, Sparkles, Users, FileJson, FileText, Archive, LayoutDashboard,
 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useProjectStore } from "@/stores/projectStore";
@@ -30,6 +30,9 @@ import type { Scene, Shot, Character, PromptPack, ProjectExport, ShotType } from
 import { startAutoSave, stopAutoSave, getLastSavedAt, markDirty } from "@/services/ProjectAutoSaveService";
 import { usePromptHistoryStore } from "@/stores/promptHistoryStore";
 import { useTaskStore } from "@/stores/taskStore";
+import { StoryboardPreview } from "@/components/pipeline/StoryboardPreview";
+import { CharacterImageSection } from "@/components/pipeline/CharacterImageSection";
+import { compositeImages } from "@/lib/imageCompositor";
 import { StatisticsPanel } from "@/components/pipeline/StatisticsPanel";
 import { QueueCardView } from "@/components/pipeline/QueueCardView";
 import { BatchOperations } from "@/components/pipeline/BatchOperations";
@@ -37,249 +40,13 @@ import { TimelineImport } from "@/components/pipeline/TimelineImport";
 import { StorageMonitor } from "@/components/pipeline/StorageMonitor";
 import { ProductionModeToggle } from "@/components/pipeline/ProductionModeToggle";
 import { CurrentTasksWidget } from "@/components/pipeline/CurrentTasksWidget";
+import { VideoDurationSelector } from "@/components/pipeline/VideoDurationSelector";
 
 function isLikelyShortPrompt(prompt: string | undefined, shotTitle?: string): boolean {
   const value = (prompt || "").trim();
   if (!value) return true;
   if (shotTitle && value === shotTitle.trim()) return true;
   return value.length < 80 && /^(镜头|Shot)\s*\d*[:：]/i.test(value) && value.endsWith("...");
-}
-
-function CharacterDnaPanel({ project, characters }: { project: any; characters: Character[] }) {
-  const { t } = useTranslation();
-  const { lockCharacter, unlockCharacter } = useProjectStore();
-  const { setLocked } = useCharacterStore();
-  const lockedChars = project.lockedCharacterIds || [];
-
-  const handleToggleLock = (charId: string) => {
-    const isLocked = lockedChars.includes(charId);
-    if (isLocked) {
-      unlockCharacter(project.id, charId);
-      setLocked(charId, false);
-    } else {
-      lockCharacter(project.id, charId);
-      setLocked(charId, true);
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Users className="h-5 w-5" />
-          {t("pipeline.characterDna")}
-        </CardTitle>
-        <CardDescription>{t("pipeline.characterDnaDesc")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {lockedChars.length > 0 && (
-          <div className="space-y-3">
-            <Label>{t("pipeline.lockedCharacters")}</Label>
-            {lockedChars.map((charId: string) => {
-              const char = characters.find((c) => c.id === charId);
-              if (!char) return null;
-              return (
-                <div key={charId} className="rounded-lg border bg-white/[0.03] p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default" className="bg-green-500/20 text-green-600 border-green-500/30">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />{t("pipeline.locked")}
-                      </Badge>
-                      <span className="font-semibold">{char.name}</span>
-                    </div>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleToggleLock(charId)}>
-                      {t("pipeline.unlock")}
-                    </Button>
-                  </div>
-                  <div className="rounded bg-muted/50 p-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium text-muted-foreground">Character DNA</span>
-                      <span className="text-xs text-muted-foreground">auto-injected</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{char.dnaBlock}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <div className="space-y-3">
-          <Label>{t("pipeline.availableCharacters")}</Label>
-          {lockedChars.length === characters.length ? (
-            <p className="text-sm text-muted-foreground">{t("pipeline.allLocked")}</p>
-          ) : characters.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("pipeline.noCharacters")}</p>
-          ) : (
-            <div className="space-y-2 max-h-[200px] overflow-y-auto">
-              {characters.filter((c) => !lockedChars.includes(c.id)).map((char) => (
-                <div key={char.id} className="flex items-center justify-between rounded-lg border p-2">
-                  <span className="text-sm font-medium">{char.name}</span>
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleToggleLock(char.id)}>
-                    {t("pipeline.lockCharacter")}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function StoryboardGenerator({ project, characters }: { project: any; characters: Character[] }) {
-  const { t } = useTranslation();
-  const { updateProject } = useProjectStore();
-  const { initFromShots } = useProductionQueue();
-  const [story, setStory] = useState(project.storyScript || "");
-  const [styleDna, setStyleDna] = useState(project.styleDna || "");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedScenes, setGeneratedScenes] = useState<Scene[]>([]);
-  const [generatedPacks, setGeneratedPacks] = useState<PromptPack[]>([]);
-  const lockedChars = (project.lockedCharacterIds || []).map((id: string) => characters.find((c) => c.id === id)).filter(Boolean);
-
-  useEffect(() => {
-    setStory(project.storyScript || "");
-    setStyleDna(project.styleDna || "");
-  }, [project.id, project.storyScript, project.styleDna]);
-
-  const handleStoryChange = (value: string) => {
-    setStory(value);
-    updateProject(project.id, { storyScript: value });
-    markDirty();
-  };
-
-  const handleStyleDnaChange = (value: string) => {
-    setStyleDna(value);
-    updateProject(project.id, { styleDna: value });
-    markDirty();
-  };
-
-  const handleGenerate = async () => {
-    setIsGenerating(true);
-    try {
-      const rawScenes = await parseStoryToScenes(story, "zh-CN");
-      updateProject(project.id, { storyScript: story, styleDna });
-      const now = Date.now();
-      const scenes: Scene[] = rawScenes.map((rs, i) => {
-        const sceneId = `scene-${now}-${i}`;
-        return {
-          id: sceneId,
-          projectId: project.id,
-          title: rs.title,
-          description: rs.description,
-          order: i,
-          shots: rs.shots.map((sh, j) => ({
-            id: `shot-${now}-${i}-${j}`,
-            sceneId,
-            title: sh.title,
-            description: sh.description,
-            order: j,
-            type: "image" as ShotType,
-            prompt: sh.description || sh.title || "",
-            renderedPrompt: "",
-            negativePrompt: "",
-            characterIds: [],
-            assetIds: [],
-            duration: 5,
-            createdAt: now,
-            updatedAt: now,
-          })),
-          characterIds: [],
-          assetIds: [],
-          createdAt: now,
-          updatedAt: now,
-        };
-      });
-      setGeneratedScenes(scenes);
-      if (scenes.length > 0) {
-        const packs = await generateAllPromptPacks(scenes, lockedChars, styleDna);
-        setGeneratedPacks(packs);
-        updateProject(project.id, { scenes });
-        initFromShots(project.id, scenes.map((s) => ({
-          id: s.id, title: s.title,
-          shots: s.shots.map((sh) => {
-            const pack = packs.find((p) => p.shotId === sh.id);
-            return {
-              id: sh.id,
-              title: sh.title,
-              order: sh.order,
-              imagePrompt: pack?.imagePrompt || sh.renderedPrompt || sh.prompt || sh.description || sh.title,
-              videoPrompt: pack?.videoPrompt || sh.renderedPrompt || sh.prompt || sh.description || sh.title,
-              negativePrompt: pack?.negativePrompt || sh.negativePrompt,
-            };
-          }),
-        })));
-      }
-    } catch (err) {
-      logger.error("StoryboardGenerator", "生成失败", { error: String(err) });
-    }
-    setIsGenerating(false);
-  };
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <BookTemplate className="h-5 w-5" />
-          {t("pipeline.storyToStoryboard")}
-        </CardTitle>
-        <CardDescription>{t("pipeline.subtitle")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>{t("pipeline.yourStory")}</Label>
-          <Textarea value={story} onChange={(e) => handleStoryChange(e.target.value)} placeholder={t("pipeline.enterStory")} className="min-h-[100px]" />
-        </div>
-        <div className="space-y-2">
-          <Label>{t("pipeline.styleDna")}</Label>
-          <Input value={styleDna} onChange={(e) => handleStyleDnaChange(e.target.value)} placeholder={t("pipeline.styleDnaPlaceholder")} />
-        </div>
-        <Button onClick={handleGenerate} disabled={isGenerating || !story.trim()}>
-          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-          {t("pipeline.generateStoryboard")}
-        </Button>
-        {generatedScenes.length > 0 && (
-          <div className="space-y-3">
-            <Separator />
-            <Label>{t("pipeline.scenes")} ({generatedScenes.length})</Label>
-            {generatedScenes.map((scene, si) => (
-              <div key={scene.id} className="rounded-lg border p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-xs">Sc{si + 1}</Badge>
-                  <span className="font-medium text-sm">{scene.title}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">{scene.description}</p>
-                {scene.shots.length > 0 && (
-                  <div className="space-y-1.5 pl-4 border-l-2 border-muted">
-                    {scene.shots.map((shot, shi) => (
-                      <div key={shot.id} className="text-xs">
-                        <span className="font-mono text-muted-foreground">Sh{shi + 1}: </span>
-                        <span>{shot.title}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        {generatedPacks.length > 0 && (
-          <div className="space-y-2">
-            <Separator />
-            <Label>{t("pipeline.prompts")} ({generatedPacks.length})</Label>
-            <div className="max-h-[200px] overflow-y-auto space-y-1">
-              {generatedPacks.map((pack) => (
-                <div key={pack.shotId} className="rounded bg-muted/50 p-2">
-                  <p className="text-[10px] font-mono text-muted-foreground truncate">{pack.imagePrompt}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
 }
 
 function ProductionQueuePanel({ project, characters }: { project: any; characters: Character[] }) {
@@ -299,6 +66,21 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
     const lockedIds = project.lockedCharacterIds || [];
     return characters.filter((character) => lockedIds.includes(character.id));
   }, [characters, project.lockedCharacterIds]);
+
+  const shotCharImageCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const charImages: Record<string, string> = (project as any).characterImages || {};
+    for (const scene of projectScenes) {
+      for (const shot of scene.shots) {
+        const charIds: string[] = (shot as any).characterIds || [];
+        const validUrls = charIds.filter((cid: string) => charImages[cid]);
+        if (validUrls.length > 0) {
+          counts[shot.id] = validUrls.length;
+        }
+      }
+    }
+    return counts;
+  }, [projectScenes, project]);
   const selectedIds = queue.selectedShotIds;
 
   useEffect(() => {
@@ -402,84 +184,62 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
     try {
       const item = projectItems.find((i) => i.shotId === shotId);
       if (!item || item.videoLocked) return;
-      if (!item.imageResultUrl) {
-        queue.updateVideoStatus(shotId, "failed", undefined, undefined, t("pipeline.videoRequiresImage"));
-        return;
-      }
+      const shotScene = projectScenes.find((sc: any) => sc.shots.some((sh: any) => sh.id === shotId));
+      const shotData = shotScene?.shots.find((sh: any) => sh.id === shotId);
+      const charIds: string[] = shotData?.characterIds || [];
+      const charImages: Record<string, string> = (project as any).characterImages || {};
+      const charImageUrls = charIds.filter((cid: string) => charImages[cid]);
+      const hasMultiCharImages = charImageUrls.length > 1;
+      const hasSingleCharImage = charImageUrls.length === 1;
+      let sourceImageUrl = item.imageResultUrl;
+      if (hasMultiCharImages) { sourceImageUrl = charImageUrls[0]; }
+      else if (hasSingleCharImage && !sourceImageUrl) { sourceImageUrl = charImageUrls[0]; }
+      if (!sourceImageUrl) { queue.updateVideoStatus(shotId, "failed", undefined, undefined, t("pipeline.videoRequiresImage")); return; }
       queue.updateVideoStatus(shotId, "generating");
       const prompt = getVideoPrompt(item);
-      localTaskId = useTaskStore.getState().addTask({
-        id: `pipeline-video-${shotId}-${Date.now()}`,
-        taskId: "",
-        type: "image-to-video",
-        model: config.imageToVideoModel || "agnes-video-v2.0",
-        prompt,
-        status: "uploading",
-        progress: 0,
-        resultUrl: "",
-        thumbnail: item.imageResultUrl,
-        errorMessage: "",
-        params: { projectId: project.id, shotId },
-      });
-      const imageFetch = await downloadImageWithRetry(item.imageResultUrl, { shotId, maxRetries: 2 });
-      if (abortController.signal.aborted) {
-        queue.updateVideoStatus(shotId, "cancelled", undefined, undefined, t("pipeline.taskCancelled"));
-        useTaskStore.getState().updateTask(localTaskId, { status: "cancelled", errorMessage: t("pipeline.taskCancelled") });
-        return;
-      }
-      if (!imageFetch.success || !imageFetch.dataUrl) {
-        const status = mapErrorToProductionStatus(imageFetch.errorType);
-        queue.updateVideoStatus(shotId, status, undefined, undefined, imageFetch.errorMessage);
-        useTaskStore.getState().updateTask(localTaskId, { status: "failed", errorMessage: imageFetch.errorMessage });
-        return;
-      }
-      useTaskStore.getState().updateTask(localTaskId, { status: "submitted" });
-      const imgResp = await fetch(imageFetch.dataUrl);
-      const imgBlob = await imgResp.blob();
-      const videoTask = await agnes.video.createFromImage({
-        image: imgBlob,
-        prompt,
-        model: config.imageToVideoModel || "agnes-video-v2.0",
-      });
-      if (videoTask?.taskId) {
-        const pollId = videoTask.videoId || videoTask.taskId;
-        queue.updateVideoStatus(shotId, "generating", pollId);
-        useTaskStore.getState().updateTask(localTaskId, { taskId: pollId, status: "processing", params: { projectId: project.id, shotId, taskId: videoTask.taskId, videoId: videoTask.videoId } });
-        const videoResult = await agnes.video.poll(pollId, {
-          signal: abortController.signal,
-          onProgress: (progress) => {
-            queue.updateVideoStatus(shotId, "generating", pollId);
-            useTaskStore.getState().updateTask(localTaskId, { status: "processing", progress: progress.progress });
-          },
-        });
-        queue.updateVideoStatus(shotId, "completed", pollId, videoResult.url);
-        useTaskStore.getState().updateTask(localTaskId, { status: "completed", progress: 100, resultUrl: videoResult.url });
-        markDirty();
-        setVideoUrls((prev) => ({ ...prev, [shotId]: videoResult.url }));
-        try { await StorageService.saveAssetFromUrl({ url: videoResult.url, type: "video", projectId: project.id, shotId }); } catch { /* non-critical */ }
+      const numFrames = item.videoDurationFrames || 121;
+      localTaskId = useTaskStore.getState().addTask({id: `pipeline-video-${shotId}-${Date.now()}`,taskId: "",type: "image-to-video",model: config.imageToVideoModel || "agnes-video-v2.0",prompt,status: "uploading",progress: 0,resultUrl: "",thumbnail: item.imageResultUrl || "",errorMessage: "",params: { projectId: project.id, shotId, numFrames }});
+      let imageBlob: Blob;
+      if (hasMultiCharImages) {
+        const compositeBlob = await compositeImages(charImageUrls);
+        if (!compositeBlob) throw new Error('Failed to composite character images');
+        imageBlob = compositeBlob;
       } else {
-        queue.updateVideoStatus(shotId, "failed", undefined, undefined, t("pipeline.noVideoTaskCreated"));
-        useTaskStore.getState().updateTask(localTaskId, { status: "failed", errorMessage: t("pipeline.noVideoTaskCreated") });
+        const imageFetch = await downloadImageWithRetry(sourceImageUrl, { shotId, maxRetries: 2 });
+        if (abortController.signal.aborted) { queue.updateVideoStatus(shotId, 'cancelled', undefined, undefined, t('pipeline.taskCancelled')); useTaskStore.getState().updateTask(localTaskId, { status: 'cancelled', errorMessage: t('pipeline.taskCancelled') }); return; }
+        if (!imageFetch.success || !imageFetch.dataUrl) { var status = mapErrorToProductionStatus(imageFetch.errorType); queue.updateVideoStatus(shotId, status, undefined, undefined, imageFetch.errorMessage); useTaskStore.getState().updateTask(localTaskId, { status: 'failed', errorMessage: imageFetch.errorMessage }); return; }
+        const imgResp = await fetch(imageFetch.dataUrl);
+        imageBlob = await imgResp.blob();
       }
+      useTaskStore.getState().updateTask(localTaskId, { status: 'submitted' });
+      const videoTask = await agnes.video.createFromImage({ image: imageBlob, prompt, model: config.imageToVideoModel || 'agnes-video-v2.0', numFrames });
+      if (videoTask && videoTask.taskId) {
+        var pollId = videoTask.videoId || videoTask.taskId;
+        queue.updateVideoStatus(shotId, 'generating', pollId);
+        useTaskStore.getState().updateTask(localTaskId, { taskId: pollId, status: 'processing', params: { projectId: project.id, shotId, taskId: videoTask.taskId, videoId: videoTask.videoId, numFrames } });
+        var videoResult = await agnes.video.poll(pollId, { signal: abortController.signal, onProgress: function(progress) { queue.updateVideoStatus(shotId, 'generating', pollId); useTaskStore.getState().updateTask(localTaskId, { status: 'processing', progress: progress.progress }); } });
+        queue.updateVideoStatus(shotId, 'completed', pollId, videoResult.url);
+        useTaskStore.getState().updateTask(localTaskId, { status: 'completed', progress: 100, resultUrl: videoResult.url });
+        markDirty();
+        setVideoUrls(function(prev) { var o: Record<string, string> = {}; for (var k in prev) o[k] = prev[k]; o[shotId] = videoResult.url; return o; });
+        try { await StorageService.saveAssetFromUrl({ url: videoResult.url, type: 'video', projectId: project.id, shotId }); } catch (e) {}
+      } else { queue.updateVideoStatus(shotId, 'failed', undefined, undefined, t('pipeline.noVideoTaskCreated')); useTaskStore.getState().updateTask(localTaskId, { status: 'failed', errorMessage: t('pipeline.noVideoTaskCreated') }); }
     } catch (err) {
-      if (abortController.signal.aborted) {
-        queue.updateVideoStatus(shotId, "cancelled", undefined, undefined, t("pipeline.taskCancelled"));
-        if (localTaskId) useTaskStore.getState().updateTask(localTaskId, { status: "cancelled", errorMessage: t("pipeline.taskCancelled") });
-        return;
-      }
-      const classified = ErrorClassifier.classify(err);
-      queue.updateVideoStatus(shotId, "failed", undefined, undefined, `${classified.type}: ${classified.userMessage}`);
-      if (localTaskId) useTaskStore.getState().updateTask(localTaskId, { status: "failed", errorMessage: `${classified.type}: ${classified.userMessage}` });
-    } finally {
-      videoAbortControllers.current.delete(shotId);
-      setProcessingVideos((prev) => { const n = new Set(prev); n.delete(shotId); return n; });
-    }
-  }, [processingVideos, projectItems, queue, config.imageToVideoModel, project.id, getVideoPrompt, t]);
+      if (abortController.signal.aborted) { queue.updateVideoStatus(shotId, 'cancelled', undefined, undefined, t('pipeline.taskCancelled')); if (localTaskId) useTaskStore.getState().updateTask(localTaskId, { status: 'cancelled', errorMessage: t('pipeline.taskCancelled') }); return; }
+      var classified = ErrorClassifier.classify(err);
+      queue.updateVideoStatus(shotId, 'failed', undefined, undefined, classified.type + ': ' + classified.userMessage);
+      if (localTaskId) useTaskStore.getState().updateTask(localTaskId, { status: 'failed', errorMessage: classified.type + ': ' + classified.userMessage });
+    } finally { videoAbortControllers.current.delete(shotId); setProcessingVideos(function(prev) { var n = new Set(prev); n.delete(shotId); return n; }); }
+  }, [processingVideos, projectItems, queue, config.imageToVideoModel, project.id, getVideoPrompt, t, projectScenes]);
 
   const handleSavePrompt = useCallback((shotId: string, prompt: string) => {
     queue.updatePrompt(shotId, prompt);
     usePromptHistoryStore.getState().saveVersion(shotId, prompt);
     markDirty();
+  }, [queue]);
+
+  const handleUpdateVideoDuration = useCallback((shotId: string, frames: number) => {
+    queue.updateItem(shotId, { videoDurationFrames: frames });
   }, [queue]);
 
   const handleBatchGenerateImages = useCallback(() => { for (const sid of selectedIds) handleGenerateImage(sid); queue.deselectAllShots(); }, [selectedIds, handleGenerateImage, queue]);
@@ -659,6 +419,8 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
             onSavePrompt={handleSavePrompt}
             getImageUrl={getImageUrl}
             getVideoUrl={getVideoUrl}
+            onUpdateVideoDuration={handleUpdateVideoDuration}
+            shotCharImageCounts={shotCharImageCounts}
           />
         </CardContent>
       </Card>
@@ -835,8 +597,8 @@ export default function PipelinePage() {
         {project && (
           <div className="flex flex-col gap-4 lg:flex-row">
             <div ref={leftRef} onScroll={handleLeftScroll} className="min-w-0 flex-1 space-y-4 lg:max-h-[calc(100vh-280px)] lg:overflow-y-auto lg:pr-1">
-              <CharacterDnaPanel project={project} characters={characters} />
-              <StoryboardGenerator project={project} characters={characters} />
+              <StoryboardPreview project={project} characters={characters} />
+              <CharacterImageSection project={project} />
             </div>
             <div ref={rightRef} onScroll={handleRightScroll} className="min-w-0 space-y-4 lg:max-h-[calc(100vh-280px)] lg:w-[480px] lg:shrink-0 lg:overflow-y-auto lg:pl-1">
               {stats && <StatisticsPanel stats={stats} />}
