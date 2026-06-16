@@ -81,3 +81,35 @@
 - 
 pm run build — Compiled successfully, all 23 pages
 - Pipeline page bundle size reduced from 20.2 kB to 17.9 kB
+## 2026-06-16 (V3.2)
+
+### Added
+
+- **Unified Asset System (V3.2)** — Memory-safe asset management with index/blob separation:
+
+  - **New type**: `src/types/asset.ts` — `AssetIndex` (lightweight metadata) + `AssetFilter` (multi-dimension query)
+  - **New store**: `src/stores/unifiedAssetStore.ts` — Zustand store with `persist`, stores only index data (no blobs). Supports search, filter by project/character/type/tag, sort by name/size/date, favorites-first
+  - **New hook**: `src/hooks/useAssetBlob.ts` — On-demand blob loading from IndexedDB with auto-revoke on unmount. `useAssetBlob(record)` returns blob URL while component is mounted. `useAssetBlobMap(records)` batch loads multiple assets
+  - **Auto-sync**: Pipeline-generated character images and videos auto-saved to IndexedDB via `StorageService` and synced to `useUnifiedAssetStore`
+
+- **Redesigned Assets Page** (`/assets`):
+  - Lazy-loaded grid with IntersectionObserver (loads blob from IndexedDB only when visible, revokes on scroll-away)
+  - Filter by type (all/image/video), project name, character name, tags
+  - Preview dialog with image/video display, metadata, and download button
+  - Favorite toggle, batch delete, manual refresh
+
+### Changed
+
+- **Pipeline page**: Old `useAssetStore` replaced with `useUnifiedAssetStore` for syncing video assets
+- **CharacterImageSection**: Generated character images now auto-saved to IndexedDB via `StorageService.saveAssetFromUrl` and synced to `useUnifiedAssetStore`
+
+### Deprecated
+
+- `src/stores/assetStore.ts` — No longer imported by any component. Kept for backward compatibility, but all new code should use `useUnifiedAssetStore`
+
+### Verification
+
+- `npm run build` — Compiled successfully, all 23 pages
+- `/assets` page: 8.47 kB (includes lazy loading, preview, filters)
+- Pipeline page: 19.4 kB
+- No memory leaks: blob URLs created on-demand and revoked on component unmount

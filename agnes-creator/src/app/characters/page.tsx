@@ -14,7 +14,7 @@ import { useTranslation } from "@/i18n";
 import { Plus, Search, Users } from "lucide-react";
 
 export default function CharactersPage() {
-  const { characters, addCharacter, removeCharacter, toggleFavorite } = useCharacterStore();
+  const { characters, addCharacter, updateCharacter, removeCharacter, toggleFavorite } = useCharacterStore();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -44,7 +44,7 @@ export default function CharactersPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{filtered.map((char) => (<CharacterCard key={char.id} character={char} onSelect={(c) => { navigator.clipboard?.writeText("@" + c.name); }} onEdit={(c) => { setEditChar(c); setShowForm(true); }} onDelete={removeCharacter} onFavorite={toggleFavorite} />))}</div>
         )}
       </div>
-      <CharacterForm key={editChar?.id || "new"} open={showForm} onOpenChange={setShowForm} onSubmit={addCharacter} initial={editChar} />
+      <CharacterForm key={editChar?.id || "new"} open={showForm} onOpenChange={setShowForm} onSubmit={(data: any) => editChar ? updateCharacter(editChar.id, data) : addCharacter(data)} initial={editChar} />
       <Dialog open={!!selectedChar} onOpenChange={(o) => { if (!o) setSelectedChar(null); }}>
         <DialogContent className="sm:max-w-lg">{selectedChar && (<><DialogHeader><DialogTitle>{selectedChar.name}</DialogTitle></DialogHeader><div className="space-y-4">{selectedChar.referenceImages.length > 0 && (<div className="flex gap-2 overflow-x-auto">{selectedChar.referenceImages.map((url, i) => (<img key={i} src={url} alt="" className="h-32 w-32 object-cover rounded-lg shrink-0" />))}</div>)}<div><p className="text-sm font-medium mb-1">{t("character.prompt")}</p><div className="rounded-md bg-muted/30 p-3 text-sm">{selectedChar.prompt || t("common.noData")}</div></div></div></>)}</DialogContent>
       </Dialog>

@@ -14,7 +14,8 @@ import { agnes } from "@/services/agnes";
 import { logger } from "@/lib/logger";
 import { Loader2, Sparkles, Users, CheckCircle2, AlertCircle, Download, Image as ImageIcon, Save } from "lucide-react";
 import { StorageService } from '@/services/StorageService';
-import { useAssetStore } from '@/stores/assetStore';
+
+import { useUnifiedAssetStore } from '@/stores/unifiedAssetStore';
 import type { Character } from '@/types';
 
 const SIZE_OPTIONS = [
@@ -208,6 +209,28 @@ export function CharacterImageSection({ project }: CharacterImageSectionProps) {
       updateProject(project.id, { characterImages: { ...current, [ch.id]: url } } as any);
 
       logger.info("CharacterImageSection", "Generated " + ch.name, { charId: ch.id, size });
+
+      // Save to IndexedDB asset library + sync to unified asset index
+      try {
+        const saveResult = await StorageService.saveAssetFromUrl({ url, type: "image", projectId: project.id, characterId: ch.id, characterName: ch.name });
+        if (saveResult.success && saveResult.data) {
+          useUnifiedAssetStore.getState().addIndex({
+            id: saveResult.data.id,
+            name: ch.name + ' - 角色形象',
+            type: 'image',
+            tags: ['generated', ch.name],
+            category: 'generated',
+            isFavorite: false,
+            projectId: project.id,
+            projectName: project.name,
+            characterId: ch.id,
+            characterName: ch.name,
+            fileSize: saveResult.data.fileSize || 0,
+          });
+        }
+      } catch (e) {
+        logger.warn("CharacterImageSection", "Failed to save image to asset library", { error: e instanceof Error ? e.message : String(e) });
+      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       setError(t("pipeline.charImageError") + ": " + msg);
@@ -292,3 +315,5 @@ export function CharacterImageSection({ project }: CharacterImageSectionProps) {
     </Card>
   );
 }
+
+

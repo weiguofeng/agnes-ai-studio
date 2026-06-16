@@ -88,7 +88,7 @@
 
 ---
 
-## V3.1 (Current)
+## V3.1 (Completed)
 
 ### Pipeline Statistics & UI Optimization
 
@@ -104,24 +104,38 @@
 
 ---
 
+## V3.2 (Current)
+
+### Unified Asset System (Memory-Safe)
+
+- **Index/blob separation**: IndexedDB stores binary blobs, Zustand stores lightweight AssetIndex metadata (no blobs in store)
+- **Memory safety**: Blob URLs created on-demand via useAssetBlob hook, auto-revoked on component unmount
+- **Lazy loading**: Assets page uses IntersectionObserver to load blobs only when cards are visible
+- **Multi-dimension filtering**: Type, project name, character name, tags, search, sort
+- **Preview dialog**: Image/video preview with metadata and download
+- **Pipeline auto-save**: Character images + videos auto-saved to IndexedDB and synced to unified store
+- **Deprecated**: Old useAssetStore replaced by useUnifiedAssetStore
+
+---
 ## Future Plans
 
-### V3.2
+### V3.3
 
 - Multi-model support for video generation
 - Queue reorder and drag-and-drop
 - Character image gallery in pipeline
 - Storyboard detail page improvements
 
-### V3.3
+### V3.4
 
 - Cloud task scheduling
 - Multi-project queue
 - One-click full project generation
 - Export queue as timeline presets
 
-### V3.4
+### V3.5
 
 - Subtitle auto-generation
 - Cover auto-generation
 - Batch project production across multiple projects
+

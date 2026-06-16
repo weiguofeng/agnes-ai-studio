@@ -57,6 +57,10 @@ export const StorageService = {
     projectId?: string;
     sceneId?: string;
     shotId?: string;
+    characterId?: string;
+    characterName?: string;
+    sceneTitle?: string;
+    shotTitle?: string;
     mimeType?: string;
   }): Promise<StorageResult<AssetRecord>> {
     try {
@@ -92,6 +96,10 @@ export const StorageService = {
         projectId: params.projectId,
         sceneId: params.sceneId,
         shotId: params.shotId,
+        characterId: params.characterId,
+        characterName: params.characterName,
+        sceneTitle: params.sceneTitle,
+        shotTitle: params.shotTitle,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         integrityCheckedAt: Date.now(),
@@ -112,6 +120,10 @@ export const StorageService = {
     projectId?: string;
     sceneId?: string;
     shotId?: string;
+    characterId?: string;
+    characterName?: string;
+    sceneTitle?: string;
+    shotTitle?: string;
   }): Promise<StorageResult<AssetRecord>> {
     try {
       const id = genId();
@@ -128,6 +140,10 @@ export const StorageService = {
         projectId: params.projectId,
         sceneId: params.sceneId,
         shotId: params.shotId,
+        characterId: params.characterId,
+        characterName: params.characterName,
+        sceneTitle: params.sceneTitle,
+        shotTitle: params.shotTitle,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         integrityCheckedAt: Date.now(),
@@ -283,3 +299,5 @@ export const StorageService = {
     return StorageService.executeSafeCleanup().then(() => ({ success: true }));
   },
 };
+
+

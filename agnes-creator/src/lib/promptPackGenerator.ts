@@ -29,7 +29,7 @@ export function generatePromptPack(
   const videoParts: string[] = [basePrompt];
   if (characterDna) videoParts.push(characterDna);
   if (styleDna) videoParts.push(styleDna);
-  videoParts.push("cinematic, motion");
+  // videoParts.push("cinematic, motion");  // removed per user request - use original shot prompt
   const videoPrompt = videoParts.join(", ");
 
   // Negative prompt

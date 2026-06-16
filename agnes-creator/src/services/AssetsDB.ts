@@ -1,4 +1,4 @@
-﻿// ========== AssetsDB — V2.8 (Optimized) ==========
+// ========== AssetsDB — V2.8 (Optimized) ==========
 // IndexedDB storage layer with comprehensive indexes for 500+ images, 200+ videos
 
 const DB_NAME = "AgnesAssetsDB";
@@ -20,6 +20,10 @@ export interface AssetRecord {
   projectId?: string;
   sceneId?: string;
   shotId?: string;
+  characterId?: string;
+  characterName?: string;
+  sceneTitle?: string;
+  shotTitle?: string;
   createdAt: number;
   updatedAt: number;
   /** V2.8: Integrity check */
@@ -201,3 +205,4 @@ export const AssetsDB = {
     });
   },
 };
+

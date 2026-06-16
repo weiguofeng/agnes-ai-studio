@@ -1,0 +1,36 @@
+
+> agnes-creator@0.1.0 dev
+> next dev -p 3000
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3000
+   - Network:      http://172.18.0.1:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 10.5s
+ ○ Compiling /characters ...
+ ✓ Compiled /characters in 18.9s (1185 modules)
+ GET /characters 200 in 20746ms
+ ✓ Compiled in 2.5s (486 modules)
+ ✓ Compiled in 202ms (472 modules)
+ GET /characters 200 in 318ms
+ ○ Compiling /projects ...
+ ✓ Compiled /projects in 2.7s (1253 modules)
+ GET /projects 200 in 3192ms
+ ○ Compiling /projects/[id] ...
+ ✓ Compiled /projects/[id] in 1409ms (1280 modules)
+ GET /projects/proj-1781623624089-1-uymr5n 200 in 3275ms
+ ○ Compiling /pipeline ...
+ ✓ Compiled /pipeline in 3s (1381 modules)
+ GET /pipeline?projectId=proj-1781623624089-1-uymr5n 200 in 3443ms
+ ○ Compiling /api/pipeline/download-image ...
+ ✓ Compiled /api/pipeline/download-image in 2s (1401 modules)
+[Pipeline Proxy] Downloading URL: 105 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] Response: status=200 OK, content-type=image/png, content-length=2905200, elapsed=2557ms
+[Pipeline Proxy] Download success: 2837.1 KB, elapsed=31590ms
+ POST /api/pipeline/download-image 200 in 34259ms
+[Pipeline Proxy] Downloading URL: 105 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] Response: status=200 OK, content-type=image/png, content-length=1521048, elapsed=3015ms
+[Pipeline Proxy] Download success: 1485.4 KB, elapsed=11240ms
+ POST /api/pipeline/download-image 200 in 11287ms

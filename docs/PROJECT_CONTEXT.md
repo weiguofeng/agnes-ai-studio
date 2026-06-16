@@ -2,7 +2,7 @@
 
 ## Current Version
 
-V3.1
+V3.2
 
 ---
 
@@ -41,7 +41,7 @@ The old "Story -> Storyboard -> Prompt -> Image" flow has been removed. Stories 
 
 ---
 
-## Current State (V3.1)
+## Current State (V3.2)
 
 ### Production Pipeline Architecture
 
@@ -78,8 +78,8 @@ Shows active pipeline video tasks with animated progress bars.
 
 **Video generation flow:**
 1. Shots loaded from project scenes via "Load to Queue"
-2. Character images generated in CharacterImageSection â†’ stored in `project.characterImages`
-3. User selects shots â†’ "Batch Generate Videos"
+2. Character images generated in CharacterImageSection â†?stored in `project.characterImages`
+3. User selects shots â†?"Batch Generate Videos"
 4. `hasVideoSourceImage` checks each shot has character images
 5. `handleGenerateVideo` calls `agnes.video.createFromImage()`:
    - Single character: `"image": "url"`
@@ -102,9 +102,9 @@ Shows active pipeline video tasks with animated progress bars.
 
 Three-layer rate limiting for Agnes API calls:
 
-1. **Mutex queue** â€” Promise-chain mutex serializes all concurrent acquire() calls
-2. **Interval limiting** â€” Query: 12000ms between requests (~5 RPM). Create: 5000ms between POST
-3. **Sliding window** â€” Max 3 queries per 20s window; waits when approaching limit
+1. **Mutex queue** â€?Promise-chain mutex serializes all concurrent acquire() calls
+2. **Interval limiting** â€?Query: 12000ms between requests (~5 RPM). Create: 5000ms between POST
+3. **Sliding window** â€?Max 3 queries per 20s window; waits when approaching limit
 
 Poll defaults: interval=15000ms, maxInterval=60000ms, 429 backoff=4x, error backoff=2x
 
@@ -113,35 +113,39 @@ Poll defaults: interval=15000ms, maxInterval=60000ms, 429 backoff=4x, error back
 - `StorageService.saveAssetFromUrl` for videos: directly uses server proxy (`/api/pipeline/download-image`), skips browser fetch (video CDNs have no CORS headers)
 - Download proxy updated to accept `video/mp4`, `video/webm`, `video/quicktime` content types
 
-### Asset Library (Dual Storage)
+### Asset Library (V3.2 Unified System)
 
-**StorageService** (IndexedDB via AssetsDB):
-- `saveAssetFromUrl` saves blob + metadata to IndexedDB
-- `refreshAssetUrl()` recreates blob URLs after page refresh (blob: URLs expire)
-- `/asset-browser` page uses this system
-- Filters: type (all/image/video), project tag, date range (today/week/month), sort (newest/oldest)
-- Character images and videos auto-saved on generation
+**Architecture: IndexedDB stores blobs, Zustand stores lightweight indexes (memory-safe)**
+- **Binary data**: Stored in IndexedDB via `AssetsDB` (images/videos/thumbnails stores + metadata index)
+- **Index layer**: `useUnifiedAssetStore` (Zustand + persist) stores only `AssetIndex` objects (id, name, type, tags, projectId, characterId, timestamps) ¡ª no blob data
+- **Memory safety**: blob URLs created on-demand via `useAssetBlob` hook, auto-revoked on component unmount. Only visible cards (~30) hold blob URLs at any time
+- **Lazy loading**: Assets page uses IntersectionObserver to load blobs from IndexedDB only when cards scroll into viewport (300px margin)
 
-**useAssetStore** (Zustand persist):
-- `/assets` page uses this system
-- Pipeline-created assets synced here via `addAsset()`:
-  - Character images: tags=["character", charName, projectName], category="generated"
-  - Videos: tags=["video", sceneTitle, shotTitle], category="output"
-- Supports type filter, tag filter, search, favorites, batch delete
+**Assets page** (`/assets`):
+- Filter by: type (all/image/video), project name, character name, tags
+- Search: by name, project name, character name, tags
+- Sort: favorites-first, by createdAt/name/fileSize (asc/desc)
+- Preview: click to open dialog with metadata, download button
+- Batch operations: multi-select delete (cascades to IndexedDB + store)
+- Refresh: manual sync from IndexedDB
 
+**Auto-save pipeline integration:**
+- Character images: generated in CharacterImageSection -> saved to IndexedDB via `StorageService.saveAssetFromUrl` -> synced to `useUnifiedAssetStore`
+- Videos: completed in pipeline -> saved to IndexedDB via `StorageService.saveAssetFromUrl` -> synced to `useUnifiedAssetStore`
+- Old `useAssetStore` deprecated ¡ª no longer imported by any component
 ### Character Image Handling
 
-- Images stored in `project.characterImages` (Record<string, charId â†’ url>)
-- Generated via CharacterImageSection â†’ Agnes Image API
+- Images stored in `project.characterImages` (Record<string, charId â†?url>)
+- Generated via CharacterImageSection â†?Agnes Image API
 - On generation: auto-saved to StorageService + synced to useAssetStore
 - Character reference images from character library shown in section
 - Prompt editor with regenerable prompt and size selection
 
 ### API Integration
 
-- `POST /v1/videos` â€” Creates video task (JSON, image URL not file)
-- `GET /agnesapi?video_id=<ID>` â€” Query result (recommended)
-- `GET /v1/videos/{task_id}` â€” Legacy query
+- `POST /v1/videos` â€?Creates video task (JSON, image URL not file)
+- `GET /agnesapi?video_id=<ID>` â€?Query result (recommended)
+- `GET /v1/videos/{task_id}` â€?Legacy query
 - Model: `agnes-video-v2.0`
 - Default frame_rate: 24
 - Valid num_frames: >= 49 && num_frames % 8 == 1
@@ -173,3 +177,4 @@ Poll defaults: interval=15000ms, maxInterval=60000ms, 429 backoff=4x, error back
 2. **Video CDN (platform-outputs.agnes-ai.space)** also lacks CORS headers. `StorageService` uses proxy for all video downloads.
 3. **Blob URLs expire on page refresh.** `StorageService.refreshAssetUrl()` recreates them from IndexedDB on load.
 4. **429 rate limits on /agnesapi.** Mutex + sliding window + conservative intervals in place. May need adjustment if API limits change.
+

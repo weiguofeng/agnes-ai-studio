@@ -30,7 +30,7 @@ import type { Scene, Shot, Character, PromptPack, ProjectExport, ShotType } from
 import { startAutoSave, stopAutoSave, getLastSavedAt, markDirty } from "@/services/ProjectAutoSaveService";
 import { usePromptHistoryStore } from "@/stores/promptHistoryStore";
 import { useTaskStore } from "@/stores/taskStore";
-import { useAssetStore } from "@/stores/assetStore";
+import { useUnifiedAssetStore } from "@/stores/unifiedAssetStore";
 import { StoryboardPreview } from "@/components/pipeline/StoryboardPreview";
 import { CharacterImageSection } from "@/components/pipeline/CharacterImageSection";
 import { compositeImages } from "@/lib/imageCompositor";
@@ -164,17 +164,19 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
         useTaskStore.getState().updateTask(localTaskId, { status: 'completed', progress: 100, resultUrl: videoResult.url });
         markDirty();
         setVideoUrls(function(prev) { var o: Record<string, string> = {}; for (var k in prev) o[k] = prev[k]; o[shotId] = videoResult.url; return o; });
-        try { await StorageService.saveAssetFromUrl({ url: videoResult.url, type: 'video', projectId: project.id, shotId }); } catch (e) { logger.warn('Pipeline', 'Failed to save video to asset library', { error: e instanceof Error ? e.message : String(e) }); }
-      // Sync to /assets page store
+        try { await StorageService.saveAssetFromUrl({ url: videoResult.url, type: 'video', projectId: project.id, shotId, sceneTitle: shotScene?.title, shotTitle: shotData?.title || shotData?.shotTitle }); } catch (e) { logger.warn('Pipeline', 'Failed to save video to asset library', { error: e instanceof Error ? e.message : String(e) }); }
+      // Sync to unified asset index
       try {
-        useAssetStore.getState().addAsset({
-          name: (shotData?.title || shotData?.shotTitle || 'Shot') + ' - ' + new Date().toLocaleTimeString(),
-          url: videoResult.url,
+        useUnifiedAssetStore.getState().addIndex({
+          name: (shotScene?.title || '') + ' - ' + (shotData?.title || shotData?.shotTitle || 'Shot') + ' [视频]',
+
           type: 'video',
           tags: ['video', shotScene?.title || '', shotData?.title || ''],
           category: 'output',
           isFavorite: false,
           projectId: project.id,
+          projectName: project.name,
+          fileSize: 0,
         });
       } catch (e) {}
       } else { queue.updateVideoStatus(shotId, 'failed', undefined, undefined, t('pipeline.noVideoTaskCreated')); useTaskStore.getState().updateTask(localTaskId, { status: 'failed', errorMessage: t('pipeline.noVideoTaskCreated') }); }
@@ -488,6 +490,9 @@ export default function PipelinePage() {
     </AppShell>
   );
 }
+
+
+
 
 
 
