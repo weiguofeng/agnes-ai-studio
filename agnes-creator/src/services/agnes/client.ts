@@ -1,24 +1,14 @@
 // ============================================================
-// Agnes SDK — HTTP Client
+// Agnes SDK - HTTP Client
 // ============================================================
-// 功能：
-//   1. 按优先级读取配置：环境变量 → localStorage → 默认值
-//   2. 基于 Axios 自动附加 Authorization header
-//   3. 统一错误处理为 AgnesApiError
-//   4. 支持 configure() 动态更新配置
-//   5. 提供 getConfigSource() 查询配置来源
+// 中文说明：统一读取配置，浏览器端通过 Next.js 代理访问 Agnes，避免 TLS/CORS 问题。
 // ============================================================
 
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { AgnesApiError, type AgnesConfig } from "./types";
 
-// -----------------------------------------------------------
-// 配置管理
-// -----------------------------------------------------------
-
 const STORAGE_KEY = "agnes-api-config";
 
-/** 配置来源枚举 */
 export type ConfigSource = "env" | "nextPublicEnv" | "localStorage" | "default";
 
 export interface ConfigWithSource {
@@ -26,7 +16,6 @@ export interface ConfigWithSource {
   source: ConfigSource;
 }
 
-/** 默认配置 */
 const DEFAULT_CONFIG: AgnesConfig = {
   apiKey: "",
   baseUrl: "https://apihub.agnes-ai.com/v1",
@@ -37,38 +26,17 @@ const DEFAULT_CONFIG: AgnesConfig = {
   imageToVideoModel: "agnes-video-v2.0",
 };
 
-/**
- * 统一配置加载函数。
- * 优先级：
- *   1. process.env.AGNES_API_KEY（服务端环境变量）
- *   2. process.env.NEXT_PUBLIC_AGNES_API_KEY（客户端环境变量）
- *   3. localStorage（用户通过 Settings 页面输入）
- *   4. 默认空配置
- */
 function loadConfig(): ConfigWithSource {
-  // 尝试服务端环境变量（仅在 Node.js 环境可用）
   try {
     const serverKey = typeof process !== "undefined" ? process.env?.AGNES_API_KEY : undefined;
-    if (serverKey) {
-      return {
-        config: { ...DEFAULT_CONFIG, apiKey: serverKey },
-        source: "env",
-      };
-    }
-  } catch { /* SSR 或无 process 环境 */ }
+    if (serverKey) return { config: { ...DEFAULT_CONFIG, apiKey: serverKey }, source: "env" };
+  } catch {}
 
-  // 尝试客户端环境变量 (NEXT_PUBLIC_*)
   try {
     const publicKey = typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_AGNES_API_KEY : undefined;
-    if (publicKey) {
-      return {
-        config: { ...DEFAULT_CONFIG, apiKey: publicKey },
-        source: "nextPublicEnv",
-      };
-    }
-  } catch { /* 无 process 环境 */ }
+    if (publicKey) return { config: { ...DEFAULT_CONFIG, apiKey: publicKey }, source: "nextPublicEnv" };
+  } catch {}
 
-  // 尝试 localStorage
   if (typeof window !== "undefined") {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -90,53 +58,45 @@ function loadConfig(): ConfigWithSource {
           };
         }
       }
-    } catch { /* localStorage 不可用 */ }
+    } catch {}
   }
 
   return { config: { ...DEFAULT_CONFIG }, source: "default" };
 }
 
-/** 将配置写入 localStorage */
 function saveConfigToStorage(config: AgnesConfig): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ state: config, version: 0 }));
-  } catch {
-    // localStorage 不可用时静默忽略
-  }
+  } catch {}
 }
-
-// -----------------------------------------------------------
-// 错误处理
-// -----------------------------------------------------------
 
 interface RawApiErrorBody {
   error?: { code?: string; message?: string };
+  message?: string;
+  detail?: string;
 }
 
-/** 将 Axios 错误转换为 AgnesApiError */
 function formatAxiosError(err: AxiosError<RawApiErrorBody>): AgnesApiError {
   const status = err.response?.status;
   const body = err.response?.data;
   const code = body?.error?.code ?? "UNKNOWN_ERROR";
-  const message =
-    body?.error?.message ??
-    err.message ??
-    "请求失败，请检查网络连接或 API 配置";
+  const message = body?.error?.message ?? body?.message ?? body?.detail ?? err.message ?? "请求失败，请检查网络连接或 API 配置";
   return new AgnesApiError(code, message, status, body);
 }
-
-// -----------------------------------------------------------
-// HTTP 客户端工厂
-// -----------------------------------------------------------
 
 export function createClient() {
   const instance: AxiosInstance = axios.create();
 
   instance.interceptors.request.use((config) => {
     const { config: cfg } = loadConfig();
-    config.baseURL = cfg.baseUrl;
+    const isBrowser = typeof window !== "undefined";
+    config.baseURL = isBrowser ? "/api/agnes" : cfg.baseUrl;
     config.headers.Authorization = `Bearer ${cfg.apiKey}`;
+    if (isBrowser) {
+      config.headers["X-Agnes-API-Key"] = cfg.apiKey;
+      config.headers["X-Agnes-Base-URL"] = cfg.baseUrl;
+    }
     return config;
   });
 
@@ -147,26 +107,19 @@ export function createClient() {
 
   return {
     instance,
-    /** 获取当前配置（含来源信息） */
     getConfigWithSource: (): ConfigWithSource => loadConfig(),
-    /** 获取当前配置（仅配置对象，向后兼容） */
     getConfig: (): AgnesConfig => loadConfig().config,
-    /** 获取配置来源描述 */
     getConfigSource: (): ConfigSource => loadConfig().source,
-    /** 动态更新配置（写入 localStorage） */
     configure: (partial: Partial<AgnesConfig>): void => {
       const { config: current } = loadConfig();
-      const next: AgnesConfig = { ...current, ...partial };
-      saveConfigToStorage(next);
+      saveConfigToStorage({ ...current, ...partial });
     },
     get: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> =>
       instance.get(url, config) as Promise<T>,
     post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> =>
       instance.post(url, data, config) as Promise<T>,
     postForm: <T = unknown>(url: string, formData: FormData): Promise<T> =>
-      instance.post(url, formData, {
-        // NOTE: Do NOT set Content-Type manually - let axios set it with the boundary
-      }) as Promise<T>,
+      instance.post(url, formData) as Promise<T>,
   };
 }
 

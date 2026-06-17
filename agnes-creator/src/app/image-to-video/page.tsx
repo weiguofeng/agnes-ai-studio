@@ -11,7 +11,8 @@ import { FileUploader } from "@/components/shared/FileUploader";
 import { useConfig } from "@/hooks/useConfig";
 import { StorageService } from "@/services/StorageService";
 import { ImageValidator } from "@/services/imageValidator";
-import { useTaskStore, taskManager } from "@/stores/taskStore";
+import { runLimitedConcurrency } from "@/lib/runLimitedConcurrency";
+import { useTaskStore } from "@/stores/taskStore";
 import { useUnifiedAssetStore } from "@/stores/unifiedAssetStore";
 import { agnes } from "@/services/agnes";
 import {
@@ -38,7 +39,7 @@ const DURATION_OPTIONS = [
   { value: "441", label: "约 18 秒 (441帧, 24fps)" },
 ];
 
-const REQUEST_DELAY_MS = 5000;
+const MAX_CONCURRENT_VIDEOS = 2;
 
 // ============================================================
 // Asset Picker Dialog — browse and select images from asset library
@@ -121,10 +122,6 @@ function AssetPickerDialog({ open, onOpenChange, onSelect }: AssetPickerProps) {
 }
 
 
-function delay(ms: number): Promise<void> {
-  return new Promise(r => setTimeout(r, ms));
-}
-
 
 
 async function downloadVideo(url: string, filename: string) {
@@ -196,72 +193,65 @@ export default function ImageToVideoPage() {
     if (!canGenerate || !file) return;
     setIsBatchLoading(true); setError(null); setResults([]);
     const activePrompts = prompts.filter(p => p.trim().length > 0);
+    const orderedResults: { url: string; prompt: string }[] = activePrompts.map((prompt) => ({ url: "", prompt }));
+    const completed = { count: 0 };
+    setResults(orderedResults);
     setBatchProgress({ current: 0, total: activePrompts.length, error: "" });
-    // First upload image to get a hosted URL
-    var imageUrl = "";
-    try {
-      const uploaded = await agnes.image.edit({ image: file, prompt: "same image", strength: 1, size: "1792x1024" });
-      if (uploaded && uploaded.length > 0 && uploaded[0].url) {
-        imageUrl = uploaded[0].url;
-      }
-    } catch (err: any) {
-      setError("图片上传失败: " + (err?.message || "未知错误"));
-      setIsBatchLoading(false);
-      return;
-    }
-    const allResults: { url: string; prompt: string }[] = [];
     const [widthStr, heightStr] = size.split("x");
-    for (let i = 0; i < activePrompts.length; i++) {
-      const p = activePrompts[i].trim();
-      setBatchProgress({ current: i + 1, total: activePrompts.length, error: "" });
+    const updateResult = (index: number, url: string) => {
+      orderedResults[index] = { url, prompt: activePrompts[index] };
+      setResults([...orderedResults]);
+    };
+    const tasks = activePrompts.map((p, index) => async () => {
+      let taskId = "";
       try {
-        const taskId = addTask({
+        taskId = addTask({
           taskId: "", type: "image-to-video",
           model, prompt: p,
           status: "uploading", progress: 0,
           resultUrl: "", thumbnail: previewUrl || "",
           sourcePreview: previewUrl || undefined,
           errorMessage: "",
-          params: { duration, size, negativePrompt },
+          params: { duration, size, negativePrompt, concurrency: MAX_CONCURRENT_VIDEOS },
         });
-        var videoTask = await agnes.video.createFromImage({
-            image: imageUrl,
-            prompt: p,
-            model,
-            width: parseInt(widthStr),
-            height: parseInt(heightStr),
-            numFrames: parseInt(duration),
-            frameRate: 24,
-            negativePrompt: negativePrompt.trim() || undefined,
-          });
-          if (videoTask && videoTask.taskId) {
-            var pollId = videoTask.videoId || videoTask.taskId;
-            useTaskStore.getState().updateTask(taskId, { taskId: pollId, status: "processing", submitTime: Date.now() });
-            try {
-              var videoResult = await agnes.video.poll(pollId, {
-                timeout: 600000,
-                onProgress: function(progress) {
-                  useTaskStore.getState().updateTask(taskId, { status: progress.status === "processing" ? "processing" : "processing", progress: progress.progress });
-                }
-              });
-              if (videoResult && videoResult.url) {
-                allResults.push({ url: videoResult.url, prompt: p });
-                setResults([...allResults]);
-                useTaskStore.getState().updateTask(taskId, { status: "completed", resultUrl: videoResult.url });
-              }
-            } catch (pollErr: any) {
-              console.error("Poll failed:", pollErr);
-              useTaskStore.getState().updateTask(taskId, { status: "failed", errorMessage: pollErr?.message || "轮询失败" });
+        const videoTask = await agnes.video.createFromImage({
+          image: file,
+          prompt: p,
+          model,
+          width: parseInt(widthStr),
+          height: parseInt(heightStr),
+          numFrames: parseInt(duration),
+          frameRate: 24,
+          negativePrompt: negativePrompt.trim() || undefined,
+        });
+        if (videoTask && videoTask.taskId) {
+          const pollId = videoTask.videoId || videoTask.taskId;
+          useTaskStore.getState().updateTask(taskId, { taskId: pollId, status: "processing", submitTime: Date.now() });
+          const videoResult = await agnes.video.poll(pollId, {
+            timeout: 600000,
+            onProgress(progress) {
+              useTaskStore.getState().updateTask(taskId, { status: "processing", progress: progress.progress });
             }
+          });
+          if (videoResult && videoResult.url) {
+            updateResult(index, videoResult.url);
+            useTaskStore.getState().updateTask(taskId, { status: "completed", progress: 100, resultUrl: videoResult.url });
           }
+        }
+        if (!videoTask?.taskId) throw new Error("视频任务创建失败");
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "生成失败";
         setBatchProgress(prev => ({ ...prev, error: msg }));
-        allResults.push({ url: "", prompt: activePrompts[i] });
-        setResults([...allResults]);
+        if (taskId) {
+          useTaskStore.getState().updateTask(taskId, { status: "failed", errorMessage: msg });
+        }
+        updateResult(index, "");
+      } finally {
+        completed.count += 1;
+        setBatchProgress(prev => ({ ...prev, current: completed.count }));
       }
-      if (i < activePrompts.length - 1) await delay(REQUEST_DELAY_MS);
-    }
+    });
+    await runLimitedConcurrency(tasks, MAX_CONCURRENT_VIDEOS);
     setIsBatchLoading(false);
   };
 

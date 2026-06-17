@@ -261,3 +261,63 @@ Import trace for requested module:
  GET /image-to-video 200 in 347ms
  ✓ Compiled in 4.4s (1773 modules)
  GET /image-to-video 200 in 1569ms
+ ○ Compiling / ...
+ ✓ Compiled / in 4.9s (980 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\prerender-manifest.json',
+  page: '/'
+}
+ GET / 500 in 6002ms
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\server\webpack-runtime.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\server\app\page.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\require.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\load-components.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\build\utils.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\build\swc\options.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\build\swc\index.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\config.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\next.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\prerender-manifest.json',
+  page: '/'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\server\webpack-runtime.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\server\app\page.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\require.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\load-components.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\build\utils.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\build\swc\options.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\build\swc\index.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\config.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\next.js
+- E:\codex-project-source\agnes-ai-studio\agnes-creator\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\server\pages\_document.js:1:325)
+    at Object.<anonymous> (E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\server\pages\_document.js:1:371) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\prerender-manifest.json'
+}
+[?25h

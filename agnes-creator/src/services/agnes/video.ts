@@ -15,37 +15,18 @@ import type {
   TaskStatus,
 } from "./types";
 
-
-// ============================================================
-// Global Rate Limiter for Agnes API
-// Prevents 429 (rate limit) errors by throttling all
-// API calls to at most 1 request per RATE_LIMIT_WINDOW ms
-// ============================================================
-
-// ============================================================
-// Conservative rate limiting with sliding-window tracking
-// Prevents 429 errors by tracking actual request rate
-// and self-throttling before hitting API limits
-// ============================================================
-// Observed behavior: ~5 queries triggers 429 (~17s window)
-// Target: max 3 queries per 20s sliding window = ~6700ms between
-// We use 12000ms to be safe and account for jitter
-// ============================================================
-
-const RATE_LIMIT_WINDOW = 12000; // ms between query requests (max ~5 RPM)
-const CREATE_RATE_LIMIT_WINDOW = 5000; // ms between POST creates (max ~12 RPM)
-const MAX_BURST_WINDOW = 20000; // sliding window for burst detection
-const MAX_QUERIES_PER_WINDOW = 3; // max queries in sliding window
+const RATE_LIMIT_WINDOW = 12000;
+const CREATE_RATE_LIMIT_WINDOW = 5000;
+const MAX_BURST_WINDOW = 20000;
+const MAX_QUERIES_PER_WINDOW = 3;
 
 class PollRateLimiter {
   private lastCallTime = 0;
   private lastCreateCallTime = 0;
   private mutex: Promise<void> = Promise.resolve();
-  private queryTimestamps: number[] = []; // sliding window timestamps
+  private queryTimestamps: number[] = [];
 
-  /** Wait for rate-limit slot, then proceed. Use `true` for POST calls. */
   async acquire(isCreateCall = false): Promise<void> {
-    // Chain onto mutex to serialize all concurrent callers
     const prev = this.mutex;
     let release: (() => void) | undefined;
     this.mutex = new Promise<void>((resolve) => { release = resolve; });
@@ -55,26 +36,18 @@ class PollRateLimiter {
       const window = isCreateCall ? CREATE_RATE_LIMIT_WINDOW : RATE_LIMIT_WINDOW;
       const now = Date.now();
 
-      // Sliding window check: count queries in last MAX_BURST_WINDOW ms
       if (!isCreateCall) {
-        this.queryTimestamps = this.queryTimestamps.filter(t => now - t < MAX_BURST_WINDOW);
+        this.queryTimestamps = this.queryTimestamps.filter((time) => now - time < MAX_BURST_WINDOW);
         if (this.queryTimestamps.length >= MAX_QUERIES_PER_WINDOW) {
-          // Nearing limit: wait until the oldest query falls out of window
           const oldestInWindow = now - this.queryTimestamps[0];
           const extraWait = Math.max(MAX_BURST_WINDOW - oldestInWindow + 2000, 0);
-          if (extraWait > 0) {
-            await new Promise<void>((resolve) => setTimeout(resolve, extraWait + Math.random() * 2000));
-          }
+          if (extraWait > 0) await delay(extraWait + Math.random() * 2000);
         }
       }
 
-      // Base rate limiting: ensure minimum gap between calls
       const lastTime = isCreateCall ? this.lastCreateCallTime : this.lastCallTime;
       const elapsed = Date.now() - lastTime;
-      if (elapsed < window) {
-        const waitMs = window - elapsed + Math.random() * (window * 0.2); // 20% jitter
-        await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
-      }
+      if (elapsed < window) await delay(window - elapsed + Math.random() * (window * 0.2));
 
       if (isCreateCall) {
         this.lastCreateCallTime = Date.now();
@@ -88,8 +61,8 @@ class PollRateLimiter {
   }
 }
 
-/** Singleton global rate limiter shared across all poll instances */
 const globalPollLimiter = new PollRateLimiter();
+
 export interface PollOptions {
   interval?: number;
   maxInterval?: number;
@@ -119,56 +92,34 @@ export function createVideoService(client: AgnesClient) {
     return { taskId, videoId };
   }
 
-  function fileToDataUri(file: File | Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsDataURL(file);
-    });
+  function buildImageInputs(image: ImageToVideoParams["image"]): string[] {
+    if (!image) return [];
+    if (Array.isArray(image)) return image;
+    if (typeof image === "string") return [image];
+    return [];
   }
 
-  async function compressImageForUpload(file: File | Blob, maxDimension = 1536, quality = 0.85): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDimension || height > maxDimension) {
-          const ratio = Math.min(maxDimension / width, maxDimension / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Canvas not available"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error("Failed to compress image"));
-        }, "image/jpeg", quality);
-        URL.revokeObjectURL(img.src);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(img.src);
-        reject(new Error("Failed to load image"));
-      };
-      img.src = URL.createObjectURL(file);
-    });
+  async function fileToBase64(file: File | Blob): Promise<string> {
+    const buffer = await file.arrayBuffer();
+    let binary = "";
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
   }
 
   async function queryAgnesApi(taskId: string): Promise<Record<string, unknown>> {
     await globalPollLimiter.acquire(false);
     const config = client.getConfig();
     const baseDomain = config.baseUrl.replace(/\/v1$/, "");
-    const url = `${baseDomain}/agnesapi?video_id=${encodeURIComponent(taskId)}`;
+    const isBrowser = typeof window !== "undefined";
+    const url = isBrowser
+      ? `/api/agnes/agnesapi?video_id=${encodeURIComponent(taskId)}`
+      : `${baseDomain}/agnesapi?video_id=${encodeURIComponent(taskId)}`;
     console.debug("[Agnes SDK] Query /agnesapi:", url);
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${config.apiKey}` },
+      headers: isBrowser
+        ? { "X-Agnes-API-Key": config.apiKey, "X-Agnes-Base-URL": config.baseUrl }
+        : { Authorization: `Bearer ${config.apiKey}` },
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
@@ -179,9 +130,7 @@ export function createVideoService(client: AgnesClient) {
     return data as Record<string, unknown>;
   }
 
-  async function create(params: TextToVideoParams): Promise<{
-    taskId: string; videoId: string; numericId: string; syncUrl: string;
-  }> {
+  async function create(params: TextToVideoParams): Promise<{ taskId: string; videoId: string; numericId: string; syncUrl: string }> {
     const config = client.getConfig();
     const model = params.model || config.textToVideoModel || config.model;
     const payload: Record<string, unknown> = {
@@ -197,13 +146,14 @@ export function createVideoService(client: AgnesClient) {
     console.debug("[Agnes SDK] POST /videos response:", JSON.stringify(res).slice(0, 800));
     const { taskId, videoId } = extractVideoTaskIds(res);
     if (!taskId) throw new Error("Failed to create video task: " + JSON.stringify(res).slice(0, 300));
-    console.debug("[Agnes SDK] Create result - taskId:", taskId, "videoId:", videoId);
     return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
   }
 
-        async function createFromImage(params: ImageToVideoParams): Promise<{ taskId: string; videoId: string; numericId: string; syncUrl: string; }> {
+  async function createFromImage(params: ImageToVideoParams): Promise<{ taskId: string; videoId: string; numericId: string; syncUrl: string }> {
     const config = client.getConfig();
     const model = params.model || config.imageToVideoModel || config.model;
+    const hasFileImage = params.image && !Array.isArray(params.image) && typeof params.image !== "string";
+    const imageInputs = hasFileImage ? [await fileToBase64(params.image as Blob)] : buildImageInputs(params.image);
     const payload: Record<string, unknown> = {
       model,
       prompt: params.prompt || "",
@@ -214,60 +164,23 @@ export function createVideoService(client: AgnesClient) {
     if (params.width) payload.width = params.width;
     if (params.negativePrompt) payload.negative_prompt = params.negativePrompt;
     if (params.seed) payload.seed = params.seed;
-    // Figure out how to send image(s)
-    var hasFileImage = params.image && !Array.isArray(params.image) && typeof params.image !== "string";
-    if (params.image && !hasFileImage) {
-      if (Array.isArray(params.image)) {
-        // Multi-image URL array: pass as extra_body.image
-        payload.extra_body = { image: params.image };
-      } else if (typeof params.image === "string") {
-        // Single image URL: pass directly
-        payload.image = params.image;
-      }
-    }
-    if (hasFileImage) {
-      // File/Blob image: use FormData for file upload
-      console.debug("[Agnes SDK] POST /videos (image) via FormData");
-      const formData = new FormData();
-      formData.append("model", model);
-      formData.append("prompt", params.prompt || "");
-      formData.append("num_frames", String(params.numFrames ?? 121));
-      formData.append("frame_rate", String(params.frameRate ?? 24));
-      if (params.height) formData.append("height", String(params.height));
-      if (params.width) formData.append("width", String(params.width));
-      if (params.negativePrompt) formData.append("negative_prompt", params.negativePrompt);
-      if (params.seed) formData.append("seed", String(params.seed));
-      formData.append("image", params.image as Blob, "image.jpg");
-      await globalPollLimiter.acquire(true);
-      const res = await client.postForm<unknown>("/videos", formData);
-      console.debug("[Agnes SDK] POST /videos (image) FormData response:", JSON.stringify(res).slice(0, 600));
-      const { taskId, videoId } = extractVideoTaskIds(res);
-      if (!taskId) throw new Error("Failed to create image-to-video task: " + JSON.stringify(res).slice(0, 300));
-      return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
-    } else {
-      console.debug("[Agnes SDK] POST /videos (image):", JSON.stringify({ ...payload, image: payload.image ? "(set)" : undefined, extra_body: payload.extra_body ? "(set)" : undefined }).slice(0, 400));
-      await globalPollLimiter.acquire(true);
-      const res = await client.post<unknown>("/videos", payload);
-      console.debug("[Agnes SDK] POST /videos (image) response:", JSON.stringify(res).slice(0, 600));
-      const { taskId, videoId } = extractVideoTaskIds(res);
-      if (!taskId) throw new Error("Failed to create image-to-video task: " + JSON.stringify(res).slice(0, 300));
-      return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
-    }
+    if (imageInputs.length > 0) payload.extra_body = { image: imageInputs };
+
+    console.debug("[Agnes SDK] POST /videos (image):", JSON.stringify({ ...payload, extra_body: imageInputs.length ? "(set)" : undefined }).slice(0, 600));
+    await globalPollLimiter.acquire(true);
+    const res = await client.post<unknown>("/videos", payload);
+    console.debug("[Agnes SDK] POST /videos (image) response:", JSON.stringify(res).slice(0, 600));
+    const { taskId, videoId } = extractVideoTaskIds(res);
+    if (!taskId) throw new Error("Failed to create image-to-video task: " + JSON.stringify(res).slice(0, 300));
+    return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
   }
 
   async function getProgress(taskId: string): Promise<TaskProgress> {
     console.debug("[Agnes SDK] Query progress: taskId=", taskId);
-    let data: Record<string, unknown>;
-    try {
-      data = await queryAgnesApi(taskId);
-    } catch (err) {
-      console.error("[Agnes SDK] Query failed:", err);
-      throw err;
-    }
-    let body: Record<string, unknown> = data;
-    if (data && typeof data === "object" && data.code === "success" && data.data && typeof data.data === "object") {
-      body = data.data as Record<string, unknown>;
-    }
+    const data = await queryAgnesApi(taskId);
+    const body = data.code === "success" && data.data && typeof data.data === "object"
+      ? data.data as Record<string, unknown>
+      : data;
     const progress = normalizeTaskProgress(body);
     console.debug("[Agnes SDK] Progress - status:", progress.status, "progress:", progress.progress, "%");
     return progress;
@@ -293,12 +206,8 @@ export function createVideoService(client: AgnesClient) {
 
     console.debug("[Agnes SDK] Start polling: taskId=", taskId, "interval:", initialInterval, "ms");
 
-
-
     while (true) {
-      if (Date.now() - startTime > timeout) {
-        throw new Error(`Video generation timeout (${timeout / 1000}s), ID: ${taskId}`);
-      }
+      if (Date.now() - startTime > timeout) throw new Error(`Video generation timeout (${timeout / 1000}s), ID: ${taskId}`);
       if (signal?.aborted) throw new Error(`Polling cancelled, ID: ${taskId}`);
 
       pollCount++;
@@ -387,8 +296,8 @@ function normalizeTaskProgress(raw: Record<string, unknown>): TaskProgress {
   const innerEffective = (innerS && String(innerS).toLowerCase() !== "queued") ? String(innerS) : undefined;
   const statusRaw = String(raw.status ?? innerEffective ?? deepFind(raw, "state") ?? "").toLowerCase();
   let progress = parseProgress(raw.progress ?? innerVideoData?.progress ?? 0);
-  if (progress === 0 && ["completed", "done", "success", "succeeded", "failed", "error", "succeed"].some((s) => statusRaw.includes(s))) progress = 100;
-  if (progress === 0 && ["not_start", "pending", "queued"].some((s) => statusRaw.includes(s))) progress = 1;
+  if (progress === 0 && ["completed", "done", "success", "succeeded", "failed", "error", "succeed"].some((status) => statusRaw.includes(status))) progress = 100;
+  if (progress === 0 && ["not_start", "pending", "queued"].some((status) => statusRaw.includes(status))) progress = 1;
   const resultUrl = String(innerVideoData?.url ?? innerVideoData?.output_url ?? raw.url ?? raw.output_url ?? raw.remixed_from_video_id ?? deepFind(raw, "url") ?? "");
   const taskId = String(raw.task_id ?? raw.taskId ?? raw.id ?? innerVideoData?.task_id ?? innerVideoData?.taskId ?? innerVideoData?.id ?? "");
   const videoId = String(raw.video_id ?? raw.videoId ?? innerVideoData?.video_id ?? innerVideoData?.videoId ?? raw.id ?? innerVideoData?.id ?? "");
@@ -403,10 +312,9 @@ function normalizeTaskProgress(raw: Record<string, unknown>): TaskProgress {
 
 function mapStatus(raw: string): TaskStatus {
   if (!raw) return "queued";
-  const s = raw.toLowerCase().trim();
-  if (["completed", "succeeded", "succeed", "done", "finished", "success", "complete"].includes(s)) return "completed";
-  if (["failed", "error", "failure", "fail"].includes(s)) return "failed";
-  if (["processing", "running", "in_progress", "inprogress", "active", "pending", "not_start", "not_started"].includes(s)) return "processing";
+  const status = raw.toLowerCase().trim();
+  if (["completed", "succeeded", "succeed", "done", "finished", "success", "complete"].includes(status)) return "completed";
+  if (["failed", "error", "failure", "fail"].includes(status)) return "failed";
+  if (["processing", "running", "in_progress", "inprogress", "active", "pending", "not_start", "not_started"].includes(status)) return "processing";
   return "queued";
 }
-
