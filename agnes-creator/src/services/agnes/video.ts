@@ -88,7 +88,16 @@ export function createVideoService(client: AgnesClient) {
     const data = obj.data && typeof obj.data === "object" ? obj.data as Record<string, unknown> : undefined;
     const nestedData = data?.data && typeof data.data === "object" ? data.data as Record<string, unknown> : undefined;
     const taskId = String(obj.task_id ?? obj.taskId ?? data?.task_id ?? data?.taskId ?? nestedData?.task_id ?? nestedData?.taskId ?? obj.id ?? data?.id ?? nestedData?.id ?? "");
-    const videoId = String(obj.video_id ?? obj.videoId ?? data?.video_id ?? data?.videoId ?? nestedData?.video_id ?? nestedData?.videoId ?? "");
+    let videoId = String(obj.video_id ?? obj.videoId ?? data?.video_id ?? data?.videoId ?? nestedData?.video_id ?? nestedData?.videoId ?? "");
+    // Try to extract video ID from complex task ID (e.g., video_<base64> containing video_id:video_xxx)
+    if (!videoId && taskId.startsWith("video_")) {
+      try {
+        const b64 = taskId.slice(6);
+        const decoded = atob(b64);
+        const match = decoded.match(/video_id:([a-zA-Z0-9_]+)/);
+        if (match) videoId = match[1];
+      } catch {}
+    }
     return { taskId, videoId };
   }
 
@@ -245,7 +254,7 @@ export function createVideoService(client: AgnesClient) {
         backoff();
         continue;
       }
-      if (progress.status === "failed") throw new Error(`Video generation failed, ID: ${taskId}`);
+      if (progress.status === "failed") { const apiErr = (progress as any).errorMessage; const errDetail = apiErr ? `: ${apiErr}` : ""; console.error("[Agnes SDK] Video generation failed", { taskId, errorMessage: apiErr }); throw new Error(`Video generation failed, ID: ${taskId}${errDetail}`); }
       await delay(currentInterval);
       backoff();
     }

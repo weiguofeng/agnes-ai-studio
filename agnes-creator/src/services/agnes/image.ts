@@ -26,7 +26,14 @@ export function createImageService(client: AgnesClient) {
       n: params.n ?? 1,
       model: params.model || config.textToImageModel || config.model,
     };
+    // Forward optional params passed from useGenerateImage hook
+    const p = params as unknown as Record<string, unknown>;
+    if (p.seed !== undefined && (p.seed as number) >= 0) payload.seed = p.seed;
+    if (p.steps !== undefined) payload.steps = p.steps;
+    if (p.guidance_scale !== undefined) payload.guidance_scale = p.guidance_scale;
+    if (p.negative_prompt) payload.negative_prompt = p.negative_prompt;
 
+    console.debug("[ImageService] Generating image, payload:", JSON.stringify(payload).slice(0, 500));
     const res = await client.post<ApiResponse<Record<string, unknown>[]>>(
       "/images/generations",
       payload

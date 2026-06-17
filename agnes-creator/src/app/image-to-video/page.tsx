@@ -241,6 +241,7 @@ export default function ImageToVideoPage() {
         if (!videoTask?.taskId) throw new Error("视频任务创建失败");
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "生成失败";
+        console.error("[ImageToVideo] Generation failed:", err);
         setBatchProgress(prev => ({ ...prev, error: msg }));
         if (taskId) {
           useTaskStore.getState().updateTask(taskId, { status: "failed", errorMessage: msg });

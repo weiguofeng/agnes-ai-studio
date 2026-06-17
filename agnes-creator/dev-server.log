@@ -1,0 +1,388 @@
+
+> agnes-creator@0.1.0 dev
+> next dev -p 3099
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3099
+   - Network:      http://169.254.26.223:3099
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 8.1s
+ ○ Compiling /image-to-video ...
+ ✓ Compiled /image-to-video in 8.9s (1234 modules)
+ GET /image-to-video 200 in 11825ms
+ ✓ Compiled in 3.1s (514 modules)
+ ✓ Compiled in 538ms (500 modules)
+ ○ Compiling /api/agnes/[...path] ...
+ ✓ Compiled /api/agnes/[...path] in 918ms (1240 modules)
+ POST /api/agnes/videos 200 in 5665ms
+ GET /api/agnes/agnesapi?video_id=video_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDphZ25lcy12aWRlby12Mi4wO3ZpZGVvX2lkOnZpZGVvX2M5ZGZiZGY4ZGRjMzM0MjE2OTRhNTg1N2Y3NjQwNTk1OWRkZTg0Y2I0NjMwYjk1Mw%3D%3D 200 in 1369ms
+ POST /api/agnes/videos 200 in 2330ms
+ GET /api/agnes/agnesapi?video_id=video_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDphZ25lcy12aWRlby12Mi4wO3ZpZGVvX2lkOnZpZGVvX2FkYjk1MDg3MmQ5NmQxNzEyOWRmYWYxYmY1MTVhOTRhMzA0MWJjNGY3NWJmZjgzOA%3D%3D 200 in 2248ms
+ GET /api/agnes/agnesapi?video_id=video_bGl0ZWxsbTpjdXN0b21fbGxtX3Byb3ZpZGVyOm9wZW5haTttb2RlbF9pZDphZ25lcy12aWRlby12Mi4wO3ZpZGVvX2lkOnZpZGVvX2M5ZGZiZGY4ZGRjMzM0MjE2OTRhNTg1N2Y3NjQwNTk1OWRkZTg0Y2I0NjMwYjk1Mw%3D%3D 200 in 1920ms
+ ⨯ ./src/services/agnes/types.ts
+Error: 
+
+Caused by:
+    0: Failed to read source code from E:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\types.ts
+    1: stream did not contain valid UTF-8
+
+Import trace for requested module:
+./src/services/agnes/types.ts
+./src/services/agnes/index.ts
+./src/app/image-to-video/page.tsx
+ ⨯ ./src/services/agnes/types.ts
+Error: 
+
+Caused by:
+    0: Failed to read source code from E:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\types.ts
+    1: stream did not contain valid UTF-8
+
+Import trace for requested module:
+./src/services/agnes/types.ts
+./src/services/agnes/index.ts
+./src/app/image-to-video/page.tsx
+ ⨯ ./src/services/agnes/types.ts
+Error: 
+
+Caused by:
+    0: Failed to read source code from E:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\types.ts
+    1: stream did not contain valid UTF-8
+
+Import trace for requested module:
+./src/services/agnes/types.ts
+./src/services/agnes/index.ts
+./src/app/image-to-video/page.tsx
+ ⨯ ./src/app/image-to-video/page.tsx
+Error: 
+
+Caused by:
+    0: Failed to read source code from E:\codex-project-source\agnes-ai-studio\agnes-creator\src\app\image-to-video\page.tsx
+    1: stream did not contain valid UTF-8
+
+Import trace for requested module:
+./src/app/image-to-video/page.tsx
+ ○ Compiling /_error ...
+ ⨯ ./src/app/image-to-video/page.tsx
+Error: 
+
+Caused by:
+    0: Failed to read source code from E:\codex-project-source\agnes-ai-studio\agnes-creator\src\app\image-to-video\page.tsx
+    1: stream did not contain valid UTF-8
+
+Import trace for requested module:
+./src/app/image-to-video/page.tsx
+ GET /image-to-video 500 in 17357ms
+ GET /image-to-video 500 in 75ms
+ GET /image-to-video 500 in 67ms
+ GET /image-to-video 500 in 67ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ ./src/app/image-to-video/page.tsx
+Error:   [31mx[0m Unexpected token. Did you mean `{'>'}` or `&gt;`?
+     ,-[[36;1;4mE:\codex-project-source\agnes-ai-studio\agnes-creator\src\app\image-to-video\page.tsx[0m:296:1]
+ [2m293[0m |             <div>
+ [2m294[0m |               <p className="font-medium text-amber-800 dark:text-amber-300">尚未配置 API</p>
+ [2m295[0m |               <p className="text-amber-700 dark:text-amber-400">
+ [2m296[0m |                 请先�?<Link href="/settings" className="underline underline-offset-2 hover:text-amber-900">API 配置</Link> 页面填写密钥�?/p>
+     : [35;1m                                                                                                                                           ^[0m
+ [2m297[0m |             </div>
+ [2m298[0m |           </CardContent>
+ [2m298[0m |         </Card>
+     `----
+  [31mx[0m Expected '</', got 'jsx text (
+  [31m|[0m           )'
+     ,-[[36;1;4mE:\codex-project-source\agnes-ai-studio\agnes-creator\src\app\image-to-video\page.tsx[0m:297:1]
+ [2m294[0m |                   <p className="font-medium text-amber-800 dark:text-amber-300">尚未配置 API</p>
+ [2m295[0m |                   <p className="text-amber-700 dark:text-amber-400">
+ [2m296[0m |                     请先�?<Link href="/settings" className="underline underline-offset-2 hover:text-amber-900">API 配置</Link> 页面填写密钥�?/p>
+ [2m297[0m | [35;1m,[0m[35;1m-[0m[35;1m>[0m             </div>
+ [2m298[0m | [35;1m`[0m[35;1m-[0m[35;1m>[0m           </CardContent>
+ [2m299[0m |             </Card>
+ [2m300[0m |           )}
+ [2m300[0m |     
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/image-to-video/page.tsx
+ GET /image-to-video 200 in 398ms
+ GET /image-to-video 500 in 186ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled /_error in 8.2s (1568 modules)
+ GET /image-to-video 200 in 1702ms
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /image-to-video 200 in 2709ms
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 2.3s (1568 modules)
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json',
+  page: '/image-to-video'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'E:\codex-project-source\agnes-ai-studio\agnes-creator\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\codex-project-source\\agnes-ai-studio\\agnes-creator\\.next\\routes-manifest.json'
+}
+ GET /image-to-video 500 in 7514ms
+ GET /image-to-video 500 in 1071ms
+ ✓ Compiled in 2.5s (1582 modules)
+ ✓ Compiled in 1901ms (1582 modules)
+ ⨯ ./src/services/agnes/video.ts
+Error:   [31mx[0m Return statement is not allowed here
+     ,-[[36;1;4mE:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\video.ts[0m:264:1]
+ [2m261[0m |     }
+ [2m262[0m |   }
+ [2m263[0m | 
+ [2m264[0m |   return { create, createFromImage, getProgress, poll };
+     : [35;1m  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+ [2m265[0m | }
+ [2m266[0m | 
+ [2m266[0m | function delay(ms: number): Promise<void> {
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mE:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\video.ts[0m:265:1]
+ [2m262[0m |   }
+ [2m263[0m | 
+ [2m264[0m |   return { create, createFromImage, getProgress, poll };
+ [2m265[0m | }
+     : [35;1m^[0m
+ [2m266[0m | 
+ [2m267[0m | function delay(ms: number): Promise<void> {
+ [2m267[0m |   return new Promise((resolve) => setTimeout(resolve, ms));
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/services/agnes/video.ts
+./src/services/agnes/index.ts
+./src/app/image-to-video/page.tsx
+ ⨯ ./src/services/agnes/video.ts
+Error:   [31mx[0m Return statement is not allowed here
+     ,-[[36;1;4mE:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\video.ts[0m:264:1]
+ [2m261[0m |     }
+ [2m262[0m |   }
+ [2m263[0m | 
+ [2m264[0m |   return { create, createFromImage, getProgress, poll };
+     : [35;1m  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+ [2m265[0m | }
+ [2m266[0m | 
+ [2m266[0m | function delay(ms: number): Promise<void> {
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mE:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\video.ts[0m:265:1]
+ [2m262[0m |   }
+ [2m263[0m | 
+ [2m264[0m |   return { create, createFromImage, getProgress, poll };
+ [2m265[0m | }
+     : [35;1m^[0m
+ [2m266[0m | 
+ [2m267[0m | function delay(ms: number): Promise<void> {
+ [2m267[0m |   return new Promise((resolve) => setTimeout(resolve, ms));
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/services/agnes/video.ts
+./src/services/agnes/index.ts
+./src/stores/taskStore.ts
+./src/app/image-to-video/page.tsx
+ ⨯ ./src/services/agnes/video.ts
+Error:   [31mx[0m Return statement is not allowed here
+     ,-[[36;1;4mE:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\video.ts[0m:264:1]
+ [2m261[0m |     }
+ [2m262[0m |   }
+ [2m263[0m | 
+ [2m264[0m |   return { create, createFromImage, getProgress, poll };
+     : [35;1m  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+ [2m265[0m | }
+ [2m266[0m | 
+ [2m266[0m | function delay(ms: number): Promise<void> {
+     `----
+  [31mx[0m Expression expected
+     ,-[[36;1;4mE:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\video.ts[0m:265:1]
+ [2m262[0m |   }
+ [2m263[0m | 
+ [2m264[0m |   return { create, createFromImage, getProgress, poll };
+ [2m265[0m | }
+     : [35;1m^[0m
+ [2m266[0m | 
+ [2m267[0m | function delay(ms: number): Promise<void> {
+ [2m267[0m |   return new Promise((resolve) => setTimeout(resolve, ms));
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/services/agnes/video.ts
+./src/services/agnes/index.ts
+./src/app/image-to-video/page.tsx
+ ✓ Compiled in 725ms (1568 modules)
+ ○ Compiling /api/agnes/[...path] ...
+ ✓ Compiled /api/agnes/[...path] in 1070ms (933 modules)
+[Agnes Proxy] Upstream error 400 /v1/images/generations {"error":{"message":"无法生成该内容，请调整提示词后重试。","type":"invalid_request_error","param":"prompt","code":"content_policy_violation"}}
+ POST /api/agnes/images/generations 400 in 2338ms
+ ✓ Compiled in 2.8s (1582 modules)
+ ✓ Compiled in 976ms (668 modules)
+ ✓ Compiled in 618ms (1568 modules)

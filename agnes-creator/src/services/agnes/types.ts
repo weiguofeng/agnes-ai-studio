@@ -88,6 +88,7 @@ export interface TaskProgress {
   progress: number;
   result?: VideoResult;
   videoId?: string;
+  errorMessage?: string;
 }
 
 /** API 閫氱敤鍝嶅簲 */
