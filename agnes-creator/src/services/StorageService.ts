@@ -68,18 +68,9 @@ export const StorageService = {
       let blob: Blob;
       if (params.url.startsWith("data:")) {
         blob = dataUrlToBlob(params.url);
-      } else if (params.type === "video") {
-        // Video CDNs almost never have CORS headers - always use proxy
-        blob = await proxyUrlToBlob(params.url);
       } else {
-        try {
-          blob = await urlToBlob(params.url);
-        } catch (directErr) {
-          logger.warn("StorageService", "direct fetch failed, falling back to proxy", {
-            error: directErr instanceof Error ? directErr.message : String(directErr),
-          });
-          blob = await proxyUrlToBlob(params.url);
-        }
+        // Always use server-side proxy to avoid CORS issues with CDN URLs
+        blob = await proxyUrlToBlob(params.url);
       }
 
       const storeName = params.type === "video" ? "videos" : params.type === "thumbnail" ? "thumbnails" : "images";

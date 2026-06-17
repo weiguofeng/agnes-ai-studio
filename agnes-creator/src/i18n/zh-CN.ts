@@ -14,7 +14,9 @@ const zh: Translations = {
   "menu.assetsLibrary": "素材资源库",
   "menu.videoEditor": "视频编辑器",
   "menu.history": "历史记录",
+  "history.title": "历史记录",
   "menu.models": "模型中心",
+  "models.title": "模型中心",
   "menu.recoveryCenter": "恢复中心",
 
   // Common

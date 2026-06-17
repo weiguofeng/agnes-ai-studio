@@ -58,15 +58,16 @@ function CharacterCard({ ch, imageUrl, isGenerating, onGenerate, onDownload, onS
   const { t } = useTranslation();
   const defaultPrompt = useMemo(() => buildDefaultPrompt(ch), [ch]);
   const [editPrompt, setEditPrompt] = useState(defaultPrompt);
-  const [size, setSize] = useState("1024x1024");
+  const [size, setSize] = useState("1024x1792");
   const [saving, setSaving] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Has reference images from character library?
-  const hasRefImages = ch.referenceImages.length > 0 || ch.references.length > 0;
-  const allRefUrls = [
+  // Has reference images from character library? (deduplicated)
+  const allRefUrls = [...new Set([
     ...ch.referenceImages,
     ...ch.references.map((r) => r.url),
-  ];
+  ])];
+  const hasRefImages = allRefUrls.length > 0;
 
   const handleSaveToLibrary = async () => {
     if (!imageUrl) return;
@@ -110,7 +111,7 @@ function CharacterCard({ ch, imageUrl, isGenerating, onGenerate, onDownload, onS
       {imageUrl && (
         <div className="flex justify-center">
           <div className="relative aspect-square w-full max-w-[200px] rounded-lg overflow-hidden border border-white/10 bg-black/20">
-            <img src={imageUrl} alt={ch.name} className="w-full h-full object-cover" />
+            <img src={imageUrl} alt={ch.name} className="w-full h-full object-cover cursor-pointer" onClick={() => setPreviewUrl(imageUrl)} />
             {/* Actions overlay on hover */}
             <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 hover:opacity-100">
               <Button size="icon" variant="ghost" className="h-8 w-8 bg-white/10 hover:bg-white/20 text-white"
@@ -142,7 +143,7 @@ function CharacterCard({ ch, imageUrl, isGenerating, onGenerate, onDownload, onS
       <div className="flex items-center gap-2">
         <Label className="text-[10px] text-muted-foreground shrink-0">{t("pipeline.charImageSize")}</Label>
         <Select value={size} onValueChange={setSize}>
-          <SelectTrigger className="h-7 text-xs flex-1">
+          <SelectTrigger className="h-7 text-xs flex-1 bg-background/80">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -171,13 +172,37 @@ function CharacterCard({ ch, imageUrl, isGenerating, onGenerate, onDownload, onS
           <><Sparkles className="h-3.5 w-3.5" /> {t("pipeline.generateCharImage")}</>
         )}
       </Button>
+    
+      {/* Image preview modal */}
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <div className="relative max-w-[90vw] max-h-[90vh]">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute -top-3 -right-3 h-8 w-8 rounded-full bg-background/80 hover:bg-background z-10"
+              onClick={(e) => { e.stopPropagation(); setPreviewUrl(null); }}
+            >
+              <span className="text-lg font-bold">&times;</span>
+            </Button>
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="max-w-full max-h-[90vh] rounded-lg object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export function CharacterImageSection({ project }: CharacterImageSectionProps) {
   const { t } = useTranslation();
-  const { characters, addReferenceImage } = useCharacterStore();
+  const { characters } = useCharacterStore();
   const { updateProject } = useProjectStore();
   const config = useConfigStore();
   const [generating, setGenerating] = useState<Record<string, boolean>>({});
@@ -210,27 +235,6 @@ export function CharacterImageSection({ project }: CharacterImageSectionProps) {
 
       logger.info("CharacterImageSection", "Generated " + ch.name, { charId: ch.id, size });
 
-      // Save to IndexedDB asset library + sync to unified asset index
-      try {
-        const saveResult = await StorageService.saveAssetFromUrl({ url, type: "image", projectId: project.id, characterId: ch.id, characterName: ch.name });
-        if (saveResult.success && saveResult.data) {
-          useUnifiedAssetStore.getState().addIndex({
-            id: saveResult.data.id,
-            name: ch.name + ' - 角色形象',
-            type: 'image',
-            tags: ['generated', ch.name],
-            category: 'generated',
-            isFavorite: false,
-            projectId: project.id,
-            projectName: project.name,
-            characterId: ch.id,
-            characterName: ch.name,
-            fileSize: saveResult.data.fileSize || 0,
-          });
-        }
-      } catch (e) {
-        logger.warn("CharacterImageSection", "Failed to save image to asset library", { error: e instanceof Error ? e.message : String(e) });
-      }
     } catch (err: any) {
       const msg = err?.message || String(err);
       setError(t("pipeline.charImageError") + ": " + msg);
@@ -256,7 +260,25 @@ export function CharacterImageSection({ project }: CharacterImageSectionProps) {
 
   const handleSaveToLibrary = async (charId: string, url: string) => {
     try {
-      addReferenceImage(charId, url, "main");
+      const saveResult = await StorageService.saveAssetFromUrl({
+        url, type: "image", projectId: project.id,
+        characterId: charId, characterName: usedChars.find(c => c.id === charId)?.name
+      });
+      if (saveResult.success && saveResult.data) {
+        useUnifiedAssetStore.getState().addIndex({
+          id: saveResult.data.id,
+          name: (usedChars.find(c => c.id === charId)?.name || "") + " - \u89d2\u8272\u5f62\u8c61",
+          type: "image",
+          tags: ["generated", usedChars.find(c => c.id === charId)?.name || ""],
+          category: "generated",
+          isFavorite: false,
+          projectId: project.id,
+          projectName: project.name,
+          characterId: charId,
+          characterName: usedChars.find(c => c.id === charId)?.name || "",
+          fileSize: saveResult.data.fileSize || 0,
+        });
+      }
       setSavedMsg(t("pipeline.charImageSaved"));
       setTimeout(() => setSavedMsg(null), 2500);
     } catch (err: any) {

@@ -5,8 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTaskStore, type UnifiedTask, taskManager } from "@/stores/taskStore";
+import { StorageService } from "@/services/StorageService";
+import { useUnifiedAssetStore } from "@/stores/unifiedAssetStore";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Sparkles, ImageIcon, Video, Download, RotateCcw, Trash2, AlertCircle, Play, X, Clock } from "lucide-react";
+import { Sparkles, ImageIcon, Video, Download, RotateCcw, Trash2, AlertCircle, Play, X, Clock, Save, Check } from "lucide-react";
 
 const TYPE_ICON: Record<string, typeof Sparkles> = {
   "text-to-image": Sparkles,
@@ -43,12 +45,10 @@ interface TaskListItemProps {
 }
 
 export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnail = true }: TaskListItemProps) {
-  const [showVideo, setShowVideo] = useState(task.status === "completed");
+  const [showVideo, setShowVideo] = useState(false);
   const store = useTaskStore.getState();
 
-  useEffect(() => {
-    if (task.status === "completed" && task.resultUrl) setShowVideo(true);
-  }, [task.status, task.resultUrl]);
+
 
   const handleRetry = useCallback(() => {
     if (onRetry) onRetry(task.id);
@@ -59,6 +59,36 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
     if (onDelete) onDelete(task.id);
     else store.removeTask(task.id);
   }, [task.id, onDelete, store]);
+
+  const assets = useUnifiedAssetStore((s) => s.indexes);
+  const addIndex = useUnifiedAssetStore((s) => s.addIndex);
+  const [saving, setSaving] = useState(false);
+  const alreadySaved = !!assets.find(a => a.name === `task-${task.id}`);
+  const handleSaveToLibrary = async () => {
+    if (!task.resultUrl || saving) return;
+    setSaving(true);
+    try {
+      const saveResult = await StorageService.saveAssetFromUrl({
+        url: task.resultUrl,
+        type: task.type.includes("video") ? "video" : "image",
+      });
+      if (saveResult.success && saveResult.data) {
+        addIndex({
+          id: saveResult.data.id,
+          name: `task-${task.id}`,
+          type: task.type.includes("video") ? "video" : "image",
+          tags: ["history", task.type],
+          category: "output",
+          isFavorite: false,
+          fileSize: saveResult.data.fileSize || 0,
+        });
+      }
+    } catch (e) {
+      console.warn("Failed to save to asset library", e);
+    }
+    setSaving(false);
+  };
+
 
   const handleDownload = useCallback(() => {
     if (onDownload) onDownload(task.resultUrl);
@@ -148,7 +178,7 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
             <>
               {showVideo ? (
                 <div className="rounded-lg overflow-hidden bg-black">
-                  <video src={task.resultUrl} controls autoPlay className="w-full max-h-[300px]">您的浏览器不支持视频播放</video>
+                  <video src={task.resultUrl} controls className="w-full max-h-[300px]">您的浏览器不支持视频播放</video>
                 </div>
               ) : (
                 <div onClick={() => setShowVideo(true)}
@@ -170,6 +200,10 @@ export function TaskListItem({ task, onRetry, onDownload, onDelete, showThumbnai
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={handleDownload}>
               <Download className="mr-1 h-3.5 w-3.5" />下载
+            </Button>
+            <Button size="sm" variant={alreadySaved ? "ghost" : "outline"} onClick={handleSaveToLibrary} disabled={alreadySaved || saving}>
+              {alreadySaved ? <Check className="mr-1 h-3.5 w-3.5 text-green-500" /> : <Save className="mr-1 h-3.5 w-3.5" />}
+              {alreadySaved ? "已保存" : "保存到素材库"}
             </Button>
           </div>
         </div>

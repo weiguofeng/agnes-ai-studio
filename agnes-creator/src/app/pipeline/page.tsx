@@ -120,6 +120,9 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
   const handleGenerateVideo = useCallback(async (shotId: string) => {
     if (processingVideos.has(shotId)) return;
     setProcessingVideos((prev) => new Set(prev).add(shotId));
+    // Clear old tasks for this shot to prevent stale progress
+    const oldShotTasks = useTaskStore.getState().tasks.filter(t => t.id.startsWith("pipeline-video-" + shotId));
+    for (const ot of oldShotTasks) useTaskStore.getState().removeTask(ot.id);
     const abortController = new AbortController();
     videoAbortControllers.current.set(shotId, abortController);
     let localTaskId = "";
@@ -168,7 +171,7 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
       // Sync to unified asset index
       try {
         useUnifiedAssetStore.getState().addIndex({
-          name: (shotScene?.title || '') + ' - ' + (shotData?.title || shotData?.shotTitle || 'Shot') + ' [视频]',
+          name: (shotScene?.title || '') + ' - ' + (shotData?.title || shotData?.shotTitle || 'Shot') + ' [瑙嗛]',
 
           type: 'video',
           tags: ['video', shotScene?.title || '', shotData?.title || ''],
@@ -214,6 +217,17 @@ function ProductionQueuePanel({ project, characters }: { project: any; character
   }, [projectItems, projectScenes, project]);
 
   const handleBatchGenerateVideos = useCallback(async () => {
+    // Clear old pipeline tasks and processing state
+    // Abort any in-flight video generation for selected shots
+    for (const sid of selectedIds) {
+      const oldController = videoAbortControllers.current.get(sid);
+      if (oldController) { oldController.abort(); videoAbortControllers.current.delete(sid); }
+    }
+    setProcessingVideos(new Set());
+    const oldTasks = useTaskStore.getState().tasks.filter(t => t.id.startsWith("pipeline-video-"));
+    for (const t of oldTasks) {
+      useTaskStore.getState().removeTask(t.id);
+    }
     const runnableIds = selectedIds.filter((sid) => {
       const item = projectItems.find((i) => i.shotId === sid);
       if (!item || item.videoLocked) return false;
@@ -479,7 +493,7 @@ export default function PipelinePage() {
             </div>
             <div ref={rightRef} onScroll={handleRightScroll} className="min-w-0 space-y-4 lg:max-h-[calc(100vh-280px)] lg:w-[480px] lg:shrink-0 lg:overflow-y-auto lg:pl-1">
               {stats && <StatisticsPanel stats={stats} />}
-              <CurrentTasksWidget />
+              <CurrentTasksWidget projectId={project.id} />
               <ProductionQueuePanel project={project} characters={characters} />
               <StorageMonitor projectId={project.id} imageUrls={storageImageUrls} videoUrls={storageVideoUrls} />
               <ProjectExportPanel project={project} characters={characters} generatedScenes={[]} />

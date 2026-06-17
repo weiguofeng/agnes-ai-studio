@@ -16,7 +16,9 @@ const en: Translations = {
   "menu.videoEditor": "Video Editor",
   "menu.aiStoryStudio": "AI Story Studio",
   "menu.history": "History",
+  "history.title": "History",
   "menu.models": "Models",
+  "models.title": "Models",
   "menu.recoveryCenter": "Recovery Center",
 
   // Common

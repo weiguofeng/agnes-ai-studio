@@ -1,28 +1,28 @@
 // ============================================================
-// Agnes SDK — 类型定义
+// Agnes SDK 鈥?绫诲瀷瀹氫箟
 // ============================================================
 
-/** SDK 配置（支持按功能指定模型） */
+/** SDK 閰嶇疆锛堟敮鎸佹寜鍔熻兘鎸囧畾妯″瀷锛?*/
 export interface AgnesConfig {
   apiKey: string;
   baseUrl: string;
-  /** 默认模型（各功能未指定时使用） */
+  /** 榛樿妯″瀷锛堝悇鍔熻兘鏈寚瀹氭椂浣跨敤锛?*/
   model: string;
-  /** 文生图模型 */
+  /** 鏂囩敓鍥炬ā鍨?*/
   textToImageModel?: string;
-  /** 图生图模型 */
+  /** 鍥剧敓鍥炬ā鍨?*/
   imageToImageModel?: string;
-  /** 文生视频模型 */
+  /** 鏂囩敓瑙嗛妯″瀷 */
   textToVideoModel?: string;
-  /** 图生视频模型 */
+  /** 鍥剧敓瑙嗛妯″瀷 */
   imageToVideoModel?: string;
 }
 
-/** 图片尺寸 */
+/** 鍥剧墖灏哄 */
 export type ImageSize = "256x256" | "512x512" | "1024x1024"
   | "768x1344" | "1344x768" | "1024x1792" | "1792x1024";
 
-/** 文生图请求参数 */
+/** 鏂囩敓鍥捐姹傚弬鏁?*/
 export interface TextToImageParams {
   prompt: string;
   size?: ImageSize;
@@ -30,15 +30,16 @@ export interface TextToImageParams {
   n?: number;
 }
 
-/** 图生图请求参数 */
+/** 鍥剧敓鍥捐姹傚弬鏁?*/
 export interface ImageToImageParams {
   image: File | Blob;
   prompt: string;
+  size?: ImageSize;
   strength?: number;
   model?: string;
 }
 
-/** 文生视频请求参数 */
+/** 鏂囩敓瑙嗛璇锋眰鍙傛暟 */
 export interface TextToVideoParams {
   prompt: string;
   model?: string;
@@ -52,7 +53,7 @@ export interface TextToVideoParams {
   numInferenceSteps?: number;
 }
 
-/** 图生视频请求参数 */
+/** 鍥剧敓瑙嗛璇锋眰鍙傛暟 */
 export interface ImageToVideoParams {
     image?: File | Blob | string | string[];
     prompt?: string;
@@ -65,22 +66,22 @@ export interface ImageToVideoParams {
     seed?: number;
   }
 
-/** 图片结果 */
+/** 鍥剧墖缁撴灉 */
 export interface ImageResult {
   url: string;
   revisedPrompt?: string;
 }
 
-/** 视频结果 */
+/** 瑙嗛缁撴灉 */
 export interface VideoResult {
   url: string;
   duration: number;
 }
 
-/** 任务状态 */
+/** 浠诲姟鐘舵€?*/
 export type TaskStatus = "queued" | "processing" | "completed" | "failed";
 
-/** 任务进度 */
+/** 浠诲姟杩涘害 */
 export interface TaskProgress {
   taskId: string;
   status: TaskStatus;
@@ -89,13 +90,13 @@ export interface TaskProgress {
   videoId?: string;
 }
 
-/** API 通用响应 */
+/** API 閫氱敤鍝嶅簲 */
 export interface ApiResponse<T> {
   data: T;
   created: number;
 }
 
-/** 创建视频任务的响应 */
+/** 鍒涘缓瑙嗛浠诲姟鐨勫搷搴?*/
 export interface VideoCreateResponse {
   id?: string;
   taskId?: string;
@@ -104,7 +105,7 @@ export interface VideoCreateResponse {
   video_id?: string;
 }
 
-/** 视频任务状态响应 */
+/** 瑙嗛浠诲姟鐘舵€佸搷搴?*/
 export interface VideoStatusResponse {
   status: string;
   progress?: number;
@@ -118,7 +119,7 @@ export interface VideoStatusResponse {
   task_id?: string;
 }
 
-/** SDK 错误 */
+/** SDK 閿欒 */
 export class AgnesApiError extends Error {
   public readonly code: string;
   public readonly status: number | undefined;

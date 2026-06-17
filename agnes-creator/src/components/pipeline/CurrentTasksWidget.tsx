@@ -6,7 +6,7 @@ import { useTranslation } from "@/i18n";
 import { useTaskStore } from "@/stores/taskStore";
 import { Loader2, Video } from "lucide-react";
 
-export function CurrentTasksWidget() {
+export function CurrentTasksWidget({ projectId }: { projectId?: string }) {
   const { t } = useTranslation();
   const tasks = useTaskStore((s) => s.tasks);
   const [animTick, setAnimTick] = useState(0);
@@ -18,9 +18,19 @@ export function CurrentTasksWidget() {
     return () => clearInterval(timer);
   }, []);
 
+  // Clean up stale tasks from other projects on mount
+  useEffect(() => {
+    if (!projectId) return;
+    const store = useTaskStore.getState();
+    const staleTasks = store.tasks.filter(t =>
+      t.id && t.id.startsWith("pipeline-video-") &&
+      t.params?.projectId !== projectId
+    );
+    for (const t of staleTasks) store.removeTask(t.id);
+  }, [projectId]);
   const activeTasks = useMemo(() => {
     // Only show pipeline-related tasks (id starts with "pipeline-video-")
-    const pipelineTasks = tasks.filter((t) => t.id && t.id.startsWith("pipeline-video-"));
+    const pipelineTasks = tasks.filter((t) => t.id && t.id.startsWith("pipeline-video-") && (!projectId || t.params?.projectId === projectId));
     const active = pipelineTasks.filter((t) =>
       ["uploading", "processing", "queued", "submitted", "rate_limited", "awaiting_asset"].includes(t.status)
     );
@@ -32,18 +42,32 @@ export function CurrentTasksWidget() {
     };
   }, [tasks]);
 
-  // Auto-cleanup: when all pipeline tasks are done, clear them after 2s
+  // Auto-cleanup: clear old failed tasks and done tasks
   useEffect(() => {
-    const pipelineTasks = tasks.filter((t) => t.id && t.id.startsWith("pipeline-video-"));
-    const allDone = pipelineTasks.length > 0 && pipelineTasks.every((t) =>
+    const pipelineTasks = tasks.filter((t) => t.id && t.id.startsWith("pipeline-video-") && (!projectId || t.params?.projectId === projectId));
+    const now = Date.now();
+    // Remove failed tasks older than 60s
+    for (const t of pipelineTasks) {
+      if (t.status === "failed" && now - t.updateTime > 60000) {
+        useTaskStore.getState().removeTask(t.id);
+      }
+    }
+    const store = useTaskStore.getState();
+    const remaining = store.tasks.filter(tt => tt.id && tt.id.startsWith("pipeline-video-") && (!projectId || tt.params?.projectId === projectId));
+    // Immediately remove completed/cancelled/timeout tasks
+    for (const t of remaining) {
+      if (["completed", "cancelled", "timeout"].includes(t.status)) {
+        useTaskStore.getState().removeTask(t.id);
+      }
+    }
+    const allDone = remaining.length > 0 && remaining.every((t) =>
       ["completed", "failed", "cancelled", "timeout"].includes(t.status)
     );
     if (allDone && !cleanupTimer.current) {
       cleanupTimer.current = setTimeout(() => {
-        const store = useTaskStore.getState();
-        for (const task of pipelineTasks) {
-          store.removeTask(task.id);
-        }
+        const store2 = useTaskStore.getState();
+        const remaining2 = store2.tasks.filter(tt => tt.id && tt.id.startsWith("pipeline-video-") && (!projectId || tt.params?.projectId === projectId));
+        for (const task of remaining2) store2.removeTask(task.id);
         cleanupTimer.current = null;
       }, 3000);
     }
@@ -54,7 +78,7 @@ export function CurrentTasksWidget() {
     return () => {
       if (cleanupTimer.current) clearTimeout(cleanupTimer.current);
     };
-  }, [tasks]);
+  }, [tasks, projectId]);
 
   // No active tasks & no failed tasks -> hide
   if (activeTasks.total === 0 && activeTasks.failed.length === 0) {
@@ -88,8 +112,8 @@ export function CurrentTasksWidget() {
               </div>
               <div className="space-y-1.5">
                 {activeTasks.video.slice(0, 5).map((task) => {
-                  const progress = task.progress >= 0 ? task.progress : 0;
-                  const isIndeterminate = task.progress < 0 || task.status === "queued" || task.status === "submitted";
+                  const progress = task.status === "completed" ? 100 : (task.progress >= 0 ? task.progress : 0);
+                  const isIndeterminate = (task.progress < 0 || task.status === "queued" || task.status === "submitted") && task.status !== "completed";
                   const statusLabel = task.status === "processing" ? `${progress}%` :
                     task.status === "rate_limited" ? t("pipeline.rateLimited") :
                     task.status === "awaiting_asset" ? t("pipeline.syncing") :

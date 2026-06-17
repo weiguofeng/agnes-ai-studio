@@ -1,0 +1,263 @@
+
+> agnes-creator@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3000
+   - Network:      http://169.254.26.223:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 9.8s
+ ○ Compiling / ...
+ ✓ Compiled / in 24.2s (1159 modules)
+ GET / 200 in 28242ms
+ ✓ Compiled in 4.9s (473 modules)
+ ✓ Compiled in 256ms (459 modules)
+ ○ Compiling /characters ...
+ ✓ Compiled /characters in 1879ms (1194 modules)
+ GET /characters 200 in 3513ms
+ ○ Compiling /projects ...
+ ✓ Compiled /projects in 3.2s (1272 modules)
+ GET /projects 200 in 4561ms
+ ○ Compiling /pipeline ...
+ ✓ Compiled /pipeline in 3.4s (1365 modules)
+ GET /pipeline 200 in 6378ms
+ ○ Compiling /assets ...
+ ✓ Compiled /assets in 2s (1384 modules)
+ GET /assets 200 in 3112ms
+ ○ Compiling /image-to-image ...
+ ✓ Compiled /image-to-image in 4.8s (1417 modules)
+ GET /image-to-image 200 in 6087ms
+ GET /pipeline 200 in 509ms
+ ○ Compiling /settings ...
+ ✓ Compiled /settings in 5.1s (1381 modules)
+ GET /settings 200 in 6367ms
+ GET /settings 200 in 917ms
+ ✓ Compiled in 1482ms (614 modules)
+ GET /settings 200 in 123ms
+ ○ Compiling /recovery ...
+ ✓ Compiled /recovery in 2.5s (1396 modules)
+ GET /recovery 200 in 2886ms
+ GET /recovery 200 in 72ms
+ ○ Compiling /prompts ...
+ ✓ Compiled /prompts in 2.1s (1431 modules)
+ GET /prompts 200 in 2293ms
+ GET /prompts 200 in 129ms
+ GET /recovery 200 in 69ms
+ ✓ Compiled in 4s (1431 modules)
+ GET /recovery 200 in 553ms
+ ○ Compiling /characters ...
+ ✓ Compiled /characters in 1254ms (812 modules)
+ GET /characters 200 in 2295ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1758ms (804 modules)
+ GET / 200 in 2184ms
+ GET / 200 in 643ms
+ ○ Compiling /history ...
+ ✓ Compiled /history in 3.3s (1446 modules)
+ GET /history 200 in 3655ms
+ GET /history 200 in 160ms
+ ○ Compiling /models ...
+ ✓ Compiled /models in 2.1s (1401 modules)
+ GET /models 200 in 2774ms
+ ○ Compiling /editor ...
+ ✓ Compiled /editor in 4.6s (1409 modules)
+ GET /editor 200 in 5043ms
+ ○ Compiling /image-to-image ...
+ ✓ Compiled /image-to-image in 1739ms (779 modules)
+ GET /image-to-image 200 in 2071ms
+ ✓ Compiled in 1412ms (1412 modules)
+ GET /history 200 in 385ms
+ GET /models 200 in 75ms
+ GET /image-to-image 200 in 107ms
+ ⚠ Fast Refresh had to perform a full reload when \agnes-creator\\src\\app\\image-to-image\\page.tsx","ids":[]} changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 4.3s (1350 modules)
+ ⨯ [Error: The default export is not a React Component in "/image-to-image/page"]
+ ⨯ [Error: The default export is not a React Component in "/image-to-image/page"] {
+  page: '/image-to-image'
+}
+ ⨯ [Error: The default export is not a React Component in "/image-to-image/page"]
+ ⨯ [Error: The default export is not a React Component in "/image-to-image/page"] {
+  page: '/image-to-image'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 7.3s (1697 modules)
+ GET /image-to-image 500 in 14552ms
+ GET /image-to-image 500 in 12107ms
+ ✓ Compiled in 9.7s (1744 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /image-to-image 200 in 1585ms
+ GET /image-to-image 200 in 3037ms
+ GET /image-to-image 200 in 260ms
+ GET /image-to-image 200 in 296ms
+ GET /image-to-image 200 in 769ms
+ ○ Compiling /api/pipeline/download-image ...
+ ✓ Compiled /api/pipeline/download-image in 4s (1750 modules)
+[Pipeline Proxy] Downloading URL: 91 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] Downloading URL: 91 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] Downloading URL: 91 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] Response: status=200 OK, content-type=image/png, content-length=1306375, elapsed=620ms
+[Pipeline Proxy] Response: status=200 OK, content-type=image/png, content-length=1519313, elapsed=1200ms
+[Pipeline Proxy] Response: status=200 OK, content-type=image/png, content-length=1300367, elapsed=1367ms
+[Pipeline Proxy] Download success: 1275.8 KB, elapsed=1753ms
+ POST /api/pipeline/download-image 200 in 6298ms
+[Pipeline Proxy] Download success: 1269.9 KB, elapsed=4008ms
+ POST /api/pipeline/download-image 200 in 5649ms
+[Pipeline Proxy] Download success: 1483.7 KB, elapsed=4575ms
+ POST /api/pipeline/download-image 200 in 7436ms
+[Pipeline Proxy] Downloading URL: 91 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] Response: status=200 OK, content-type=image/png, content-length=1306375, elapsed=878ms
+[Pipeline Proxy] Download success: 1275.8 KB, elapsed=3237ms
+ POST /api/pipeline/download-image 200 in 3295ms
+ ✓ Compiled in 5.8s (1750 modules)
+ ✓ Compiled in 1483ms (1750 modules)
+ GET /image-to-image 200 in 4732ms
+ ○ Compiling /assets ...
+ ✓ Compiled /assets in 2.7s (966 modules)
+ GET /assets 200 in 3344ms
+ ○ Compiling /projects ...
+ ✓ Compiled /projects in 876ms (978 modules)
+ GET /projects 200 in 1228ms
+ ○ Compiling /image-to-video ...
+ ✓ Compiled /image-to-video in 3.8s (1772 modules)
+ GET /image-to-video 200 in 4015ms
+ ✓ Compiled in 6.2s (1777 modules)
+ GET /image-to-video 200 in 415ms
+ ✓ Compiled in 2.4s (1777 modules)
+ GET /image-to-video 200 in 261ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 5s (1751 modules)
+ GET /image-to-video 404 in 3884ms
+ GET /image-to-video 404 in 82ms
+ GET /image-to-video 404 in 451ms
+ ○ Compiling /image-to-video ...
+ ✓ Compiled /image-to-video in 7s (1768 modules)
+ GET /image-to-video 200 in 6296ms
+ GET /image-to-video 200 in 74ms
+ ✓ Compiled in 2.2s (1777 modules)
+ GET /image-to-video 200 in 220ms
+ GET /image-to-video 200 in 852ms
+ GET /image-to-image 200 in 495ms
+ GET /image-to-video 200 in 943ms
+ GET /image-to-video 200 in 568ms
+ GET /image-to-image 200 in 454ms
+ GET /image-to-image 200 in 526ms
+ GET /image-to-image 200 in 483ms
+ GET /image-to-image 200 in 549ms
+ GET /image-to-image 200 in 494ms
+ GET /image-to-video 200 in 593ms
+ GET /image-to-video 200 in 501ms
+ ✓ Compiled in 3.8s (1777 modules)
+ GET /image-to-video 200 in 412ms
+ ✓ Compiled in 1933ms (1777 modules)
+ GET /image-to-video 200 in 295ms
+ GET /image-to-video 200 in 992ms
+ GET /image-to-video 200 in 557ms
+ ✓ Compiled in 5.6s (1777 modules)
+ GET /image-to-video 200 in 371ms
+ ✓ Compiled in 1917ms (1777 modules)
+ GET /image-to-video 200 in 216ms
+ ✓ Compiled in 1418ms (804 modules)
+ GET /image-to-video 200 in 199ms
+ GET /image-to-video 200 in 1246ms
+ ✓ Compiled in 4.4s (1777 modules)
+ ✓ Compiled in 2.3s (1777 modules)
+ GET /image-to-video 200 in 1423ms
+ GET /image-to-video 200 in 446ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 7.8s (1777 modules)
+ ⨯ ReferenceError: AssetPickerDialog is not defined
+    at ImageToVideoPage (src\app\image-to-video\page.tsx:428:8)
+  426 |         bgGradient="via-orange-50/20"
+  427 |       />
+> 428 |       <AssetPickerDialog open={showAssetPicker} onOpenChange={setShowAssetPicker} onSelect={handleSelectFromAsset} />
+      |        ^
+  429 |       <TaskMonitorPanel />
+  430 |       <Dialog open={!!previewVideo} onOpenChange={(open: boolean) => { if (!open) setPreviewVideo(null); }}>
+  431 |         <DialogContent className="max-w-4xl p-2 bg-black/90 border-0"> {
+  digest: '209470990'
+}
+ GET /image-to-video 500 in 7671ms
+ ✓ Compiled in 2.9s (1777 modules)
+ ✓ Compiled in 3.9s (1777 modules)
+ GET /image-to-video 200 in 274ms
+ GET /image-to-video 200 in 805ms
+ GET /image-to-video 200 in 610ms
+ ○ Compiling /api/upload ...
+ ✓ Compiled /api/upload in 4.8s (1782 modules)
+[Upload Proxy] Uploaded: asset-f0jo6u17.png 2905200 bytes, type: image/png
+ POST /api/upload 200 in 5349ms
+[Upload Proxy] Uploaded: asset-f0jo6u17.png 2905200 bytes, type: image/png
+ POST /api/upload 200 in 104ms
+ ✓ Compiled in 4s (1763 modules)
+ ✓ Compiled in 2.9s (1777 modules)
+ GET /image-to-video 200 in 732ms
+ GET /image-to-video 200 in 858ms
+ GET /image-to-video 200 in 451ms
+ GET /image-to-image 200 in 813ms
+ GET /image-to-video 200 in 521ms
+ ○ Compiling /generate-image ...
+ ✓ Compiled /generate-image in 10.3s (1799 modules)
+ GET /generate-image 200 in 10826ms
+ GET /generate-image 200 in 89ms
+ GET /generate-image 200 in 1144ms
+ GET /image-to-video 200 in 103ms
+ ✓ Compiled in 3.5s (1773 modules)
+ ✓ Compiled in 1905ms (1773 modules)
+ ✓ Compiled in 1518ms (1773 modules)
+ GET /image-to-video 200 in 1166ms
+ GET /image-to-image 200 in 514ms
+ GET /image-to-video 200 in 1206ms
+ GET /image-to-video 200 in 695ms
+ ✓ Compiled in 4s (1787 modules)
+ GET /image-to-video 200 in 342ms
+ ✓ Compiled in 1803ms (1773 modules)
+ GET /image-to-video 200 in 1623ms
+ GET /image-to-video 200 in 787ms
+ ✓ Compiled in 7s (1787 modules)
+ GET /image-to-video 200 in 925ms
+ GET /image-to-video 200 in 1371ms
+ GET /image-to-video 200 in 1045ms
+ ⨯ ./src/services/agnes/video.ts
+Error:   [31mx[0m Expected '(', got 'function'
+     ,-[[36;1;4mE:\codex-project-source\agnes-ai-studio\agnes-creator\src\services\agnes\video.ts[0m:239:1]
+ [2m236[0m |     return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
+ [2m237[0m |   }
+ [2m238[0m | 
+ [2m239[0m |   async function getProgressasync function getProgress(taskId: string): Promise<TaskProgress> {
+     : [35;1m                                  ^^^^^^^^[0m
+ [2m240[0m |     console.debug("[Agnes SDK] Query progress: taskId=", taskId);
+ [2m241[0m |     let data: Record<string, unknown>;
+ [2m242[0m |     try {
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/services/agnes/video.ts
+./src/services/agnes/index.ts
+./src/app/pipeline/page.tsx
+ ✓ Compiled in 2.4s (1773 modules)
+ GET /image-to-video 200 in 1117ms
+ GET /image-to-video 200 in 624ms
+ ○ Compiling /api/pipeline/download-image ...
+ ✓ Compiled /api/pipeline/download-image in 4.8s (993 modules)
+[Pipeline Proxy] Downloading URL: 133 chars, domain=platform-outputs.agnes-ai.space, proto=https:, hasQuery=false
+[Pipeline Proxy] Response: status=200 OK, content-type=video/mp4, content-length=1422475, elapsed=1727ms
+[Pipeline Proxy] Download success: 1389.1 KB, elapsed=5669ms
+ POST /api/pipeline/download-image 200 in 12242ms
+ ✓ Compiled in 5.3s (1787 modules)
+ GET /image-to-video 200 in 12447ms
+ GET /image-to-video 200 in 1272ms
+ GET /image-to-video 200 in 743ms
+ ○ Compiling /history ...
+ ✓ Compiled /history in 6.7s (982 modules)
+ GET /history 200 in 7674ms
+ GET /assets 200 in 338ms
+ GET /image-to-video 200 in 89ms
+ ✓ Compiled in 4.2s (1787 modules)
+ GET /image-to-video 200 in 347ms
+ ✓ Compiled in 4.4s (1773 modules)
+ GET /image-to-video 200 in 1569ms

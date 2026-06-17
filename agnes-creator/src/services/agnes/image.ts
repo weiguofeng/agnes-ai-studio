@@ -1,9 +1,8 @@
 // ============================================================
-// Agnes SDK — 图像生成服务
+// Agnes SDK 鈥?鍥惧儚鐢熸垚鏈嶅姟
 // ============================================================
-// 根据官方文档：
-//   文生图 & 图生图都使用 POST /v1/images/generations
-//   图生图时在 extra_body.image 中传递图片 URL 或 Base64 Data URI
+// 鏍规嵁瀹樻柟鏂囨。锛?//   鏂囩敓鍥?& 鍥剧敓鍥鹃兘浣跨敤 POST /v1/images/generations
+//   鍥剧敓鍥炬椂鍦?extra_body.image 涓紶閫掑浘鐗?URL 鎴?Base64 Data URI
 // ============================================================
 
 import type { AgnesClient } from "./client";
@@ -16,8 +15,7 @@ import type {
 
 export function createImageService(client: AgnesClient) {
   // -----------------------------------------------------------
-  // 文生图
-  // -----------------------------------------------------------
+  // 鏂囩敓鍥?  // -----------------------------------------------------------
   async function generate(
     params: TextToImageParams
   ): Promise<ImageResult[]> {
@@ -38,19 +36,19 @@ export function createImageService(client: AgnesClient) {
   }
 
   // -----------------------------------------------------------
-  // 图生图 — 使用 /images/generations + extra_body.image
+  // 鍥剧敓鍥?鈥?浣跨敤 /images/generations + extra_body.image
   // -----------------------------------------------------------
   async function edit(params: ImageToImageParams): Promise<ImageResult[]> {
     const config = client.getConfig();
     const model = params.model || config.imageToImageModel || config.model;
 
-    // 将 File/Blob 转换为 Base64 Data URI
+    // 灏?File/Blob 杞崲涓?Base64 Data URI
     const imageDataUri = await fileToDataUri(params.image);
 
     const payload: Record<string, unknown> = {
       model,
       prompt: params.prompt,
-      size: "1024x1024",
+      size: params.size ?? "1792x1024",
       n: 1,
       extra_body: {
         image: [imageDataUri],
@@ -69,15 +67,15 @@ export function createImageService(client: AgnesClient) {
 }
 
 // -----------------------------------------------------------
-// 内部辅助
+// 鍐呴儴杈呭姪
 // -----------------------------------------------------------
 
-/** 将 File/Blob 转换为 Base64 Data URI */
+/** 灏?File/Blob 杞崲涓?Base64 Data URI */
 function fileToDataUri(file: File | Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error("读取文件失败"));
+    reader.onerror = () => reject(new Error("璇诲彇鏂囦欢澶辫触"));
     reader.readAsDataURL(file);
   });
 }

@@ -201,10 +201,9 @@ export function createVideoService(client: AgnesClient) {
     return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
   }
 
-    async function createFromImage(params: ImageToVideoParams): Promise<{ taskId: string; videoId: string; numericId: string; syncUrl: string; }> {
+        async function createFromImage(params: ImageToVideoParams): Promise<{ taskId: string; videoId: string; numericId: string; syncUrl: string; }> {
     const config = client.getConfig();
     const model = params.model || config.imageToVideoModel || config.model;
-    // API accepts JSON with image URL(s), NOT FormData or base64
     const payload: Record<string, unknown> = {
       model,
       prompt: params.prompt || "",
@@ -215,22 +214,45 @@ export function createVideoService(client: AgnesClient) {
     if (params.width) payload.width = params.width;
     if (params.negativePrompt) payload.negative_prompt = params.negativePrompt;
     if (params.seed) payload.seed = params.seed;
-    if (params.image) {
+    // Figure out how to send image(s)
+    var hasFileImage = params.image && !Array.isArray(params.image) && typeof params.image !== "string";
+    if (params.image && !hasFileImage) {
       if (Array.isArray(params.image)) {
-        // Multi-image: pass as extra_body.image array
+        // Multi-image URL array: pass as extra_body.image
         payload.extra_body = { image: params.image };
-      } else {
-        // Single image: pass as image URL string
+      } else if (typeof params.image === "string") {
+        // Single image URL: pass directly
         payload.image = params.image;
       }
     }
-    console.debug("[Agnes SDK] POST /videos (image):", JSON.stringify({ ...payload, image: payload.image ? "(set)" : undefined, extra_body: payload.extra_body ? "(set)" : undefined }).slice(0, 400));
-    await globalPollLimiter.acquire(true);
+    if (hasFileImage) {
+      // File/Blob image: use FormData for file upload
+      console.debug("[Agnes SDK] POST /videos (image) via FormData");
+      const formData = new FormData();
+      formData.append("model", model);
+      formData.append("prompt", params.prompt || "");
+      formData.append("num_frames", String(params.numFrames ?? 121));
+      formData.append("frame_rate", String(params.frameRate ?? 24));
+      if (params.height) formData.append("height", String(params.height));
+      if (params.width) formData.append("width", String(params.width));
+      if (params.negativePrompt) formData.append("negative_prompt", params.negativePrompt);
+      if (params.seed) formData.append("seed", String(params.seed));
+      formData.append("image", params.image as Blob, "image.jpg");
+      await globalPollLimiter.acquire(true);
+      const res = await client.postForm<unknown>("/videos", formData);
+      console.debug("[Agnes SDK] POST /videos (image) FormData response:", JSON.stringify(res).slice(0, 600));
+      const { taskId, videoId } = extractVideoTaskIds(res);
+      if (!taskId) throw new Error("Failed to create image-to-video task: " + JSON.stringify(res).slice(0, 300));
+      return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
+    } else {
+      console.debug("[Agnes SDK] POST /videos (image):", JSON.stringify({ ...payload, image: payload.image ? "(set)" : undefined, extra_body: payload.extra_body ? "(set)" : undefined }).slice(0, 400));
+      await globalPollLimiter.acquire(true);
       const res = await client.post<unknown>("/videos", payload);
-    console.debug("[Agnes SDK] POST /videos (image) response:", JSON.stringify(res).slice(0, 600));
-    const { taskId, videoId } = extractVideoTaskIds(res);
-    if (!taskId) throw new Error("Failed to create image-to-video task: " + JSON.stringify(res).slice(0, 300));
-    return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
+      console.debug("[Agnes SDK] POST /videos (image) response:", JSON.stringify(res).slice(0, 600));
+      const { taskId, videoId } = extractVideoTaskIds(res);
+      if (!taskId) throw new Error("Failed to create image-to-video task: " + JSON.stringify(res).slice(0, 300));
+      return { taskId, videoId: videoId || taskId, numericId: "", syncUrl: "" };
+    }
   }
 
   async function getProgress(taskId: string): Promise<TaskProgress> {
