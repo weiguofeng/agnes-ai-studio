@@ -1,72 +1,38 @@
-# Deployment Guide
+# 部署指南
 
-## Local Development
+> [English](DEPLOYMENT_EN.md) · [API](API.md) · [架构](ARCHITECTURE.md)
 
-### Prerequisites
-- Node.js 22+
+## 前提条件
+- Node.js 20+
 - npm 10+
-- Agnes API key (sign up at https://agnes-ai.com)
+- Agnes API Key (https://agnes-ai.com 注册)
 
-### Setup
+## 本地开发
 ```bash
-git clone <repo-url>
 cd agnes-creator
 npm install
-
-# Create environment file
-cp .env.example .env.local
-# Edit .env.local with your API key
-
-# Start dev server
-npm run dev
-# ? http://localhost:3000
+npm run dev    # 端口 3000
+npm run build  # 生产构建
+npm start      # 生产启动
 ```
 
-### Production Build
+## 环境变量
+| 变量 | 说明 |
+|------|------|
+| AGNES_API_KEY | 服务端 API Key (可选) |
+| NEXT_PUBLIC_AGNES_API_KEY | 客户端 API Key (可选) |
+优先级: env > localStorage > 默认值
+
+## 端口配置
+默认 3000。清除占用: `netstat -ano | findstr :3000` 然后 `Stop-Process -Id <PID> -Force`
+
+## 缓存清理
 ```bash
-npm run build
-npm start
-# ? http://localhost:3000
+Remove-Item -Recurse -Force .next
 ```
 
-## Docker Deployment (Planned)
-
-```dockerfile
-FROM node:22-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM node:22-alpine AS runner
-WORKDIR /app
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-```bash
-docker build -t agnes-studio .
-docker run -p 3000:3000 \
-  -e NEXT_PUBLIC_AGNES_API_KEY=sk-your-key \
-  agnes-studio
-```
-
-## Vercel Deployment (Planned)
-
-1. Push code to GitHub/GitLab
-2. Import repository in Vercel
-3. Configure environment variables:
-   - `NEXT_PUBLIC_AGNES_API_KEY`
-4. Deploy
-
-### Important Notes
-
-- **Port**: Always uses port 3000
-- **Cold start**: First load takes 20-30s compilation, subsequent ~200ms
-- **Storage**: Browser IndexedDB - assets are NOT server-side. Clear browser data to reset.
-- **API Key**: Can be set via env vars or Settings UI page
+## Vercel 部署
+1. 推送代码到 GitHub
+2. Vercel 导入项目
+3. 设置环境变量
+4. 自动部署

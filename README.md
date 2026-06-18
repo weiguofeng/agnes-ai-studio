@@ -1,130 +1,225 @@
 # Agnes AI Studio
 
-> AI Video Production Pipeline ? From Characters to Videos in One Flow
+![Language / 语言](https://img.shields.io/badge/CN-%E4%B8%AD%E6%96%87-blue)
+🇨🇳 **简体中文**（当前） · 🇺🇸 [English](README_EN.md)
 
-[![Next.js](https://img.shields.io/badge/Next.js-15.5-black?logo=next.js)](https://nextjs.org) [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript)](https://www.typescriptlang.org) [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+> AI 视频生产流水线 · 角色驱动 · 批量生成 · 全流程管理
 
-## Project Overview
+## 目录
+- [项目介绍](#1-项目介绍)
+- [核心功能](#2-核心功能)
+- [系统架构](#3-系统架构)
+- [数据流](#4-数据流)
+- [视频生产流程](#5-视频生产流程)
+- [技术栈](#6-技术栈)
+- [页面介绍](#7-页面介绍)
+- [Agnes API 集成](#8-agnes-api-集成)
+- [存储架构](#9-存储架构)
+- [快速开始](#10-快速开始)
+- [部署方式](#11-部署方式)
+- [国际化](#12-国际化)
+- [开发规范](#13-开发规范)
+- [FAQ](#14-faq)
+- [License](#15-license)
 
+## 1. 项目介绍
 
+**Agnes AI Studio** 是一个完整的 AI 视频生产流水线应用，提供从角色管理、项目创建、分镜设计到批量视频生成的全流程解决方案。
 
-## Features
+### 核心理念
+- **角色一致性优先** — 通过角色库统一管理角色形象
+- **图生视频为主** — 先生成角色图片再以图生视频方式生成视频
+- **流水线式生产** — 批量生成、队列管理、任务监控
 
-- **Character Management** - CRUD with reference images, structured profiles
-- **Project & Storyboard** - Create projects with scenes and shots
-- **AI Production Pipeline** - Generate character images to batch video generation
-- **Text-to-Image** - Generate images with advanced params (seed, steps, CFG scale)
-- **Image-to-Image** - Upload multiple images with same prompt
-- **Image-to-Video** - Single image + multi-prompt batch generation
-- **Asset Library** - Browser-side IndexedDB storage
-- **Task Center** - View history, replay, save to library
-- **Real-time Task Monitor** - Track ongoing generation tasks
-- **Rate Limiting** - Built-in 429 backoff for video polling
-- **i18n** - Chinese and English support
+### 适用场景
+- 短视频内容创作
+- AI 故事视频制作
+- 品牌营销视频批量生产
 
-## System Architecture
+## 2. 核心功能
+| 功能 | 路由 | 说明 |
+|------|------|------|
+| **角色库管理** | /characters | 创建/编辑角色，参考图上传 |
+| **项目管理** | /projects | 场景和分镜管理，角色关联 |
+| **生产流水线** | /pipeline | 角色图生成 → 批量视频→素材入库 |
+| **文生图** | /generate-image | 文本生成图片，高级参数 |
+| **图生图** | /image-to-image | 多图上传，同 Prompt 批量 |
+| **图生视频** | /image-to-video | 图片参考，多 Prompt 批量 |
+| **素材资源库** | /assets | 统一管理图片/视频 |
+| **任务中心** | /history | 任务历史和状态 |
+| **模型中心** | /models | AI 模型参数配置 |
+| **提示词工作流** | /prompts | 提示词模板管理 |
+| **恢复中心** | /recovery | 数据恢复和备份 |
+
+## 3. 系统架构
 
 ```mermaid
 graph TB
-    subgraph Client[Browser]
-        UI[React UI] --> SDK[Agnes SDK]
+    subgraph "前端 (Next.js)"
+        P[页面组件]
+        Z[Zustand Store]
+        SDK[Agnes SDK]
     end
-    subgraph Server[Next.js Server]
-        P[API Proxy /api/agnes/[...path]]
-        DI[Download Proxy /api/pipeline/download-image]
+    subgraph "代理层"
+        API[API 代理 api/agnes]
+        DL[下载代理]
     end
-    subgraph Storage[Browser Storage]
-        IDB[(IndexedDB - AssetsDB)]
-        LS[(localStorage - Config)]
+    subgraph "外部服务"
+        AGNES[Agnes API]
+        CDN[CDN]
     end
-    subgraph External[External APIs]
-        AI[Agnes AI API apihub.agnes-ai.com]
-        CDN[(Agnes CDN)]
+    subgraph "存储"
+        IDB[IndexedDB]
+        LS[localStorage]
     end
-    SDK -->|API calls| P
-    P --> AI
-    AI --> CDN
-    UI -->|save/load| IDB
-    UI -->|download via proxy| DI
-    DI --> CDN
+    P --> Z --> LS
+    P --> SDK --> API --> AGNES --> CDN
+    SDK --> DL --> CDN
+    SDK --> IDB
 ```
 
-## Tech Stack
+## 4. 数据流
 
-| Category | Technology |
-|----------|-----------|
-| Framework | Next.js 15.5 (App Router) |
-| Language | TypeScript 5.7 |
-| UI Library | React 19 |
-| Styling | Tailwind CSS 3.4 + shadcn/ui |
-| State Management | Zustand 5.0 |
-| HTTP Client | Axios 1.7 |
-| Storage | IndexedDB + localStorage |
-| Testing | Vitest + Playwright |
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant UI as 页面
+    participant SDK as SDK
+    participant P as 代理
+    participant A as Agnes API
+    participant DB as IndexedDB
+    U->>UI: 创建角色/输入提示词
+    UI->>SDK: 调用生成 API
+    SDK->>P: HTTP 请求
+    P->>A: 转发
+    A-->>P: 返回
+    P-->>SDK: 解析
+    SDK-->>UI: 结果
+    UI->>DB: 保存到素材库
+    UI-->>U: 显示
+    Note over U,DB: 视频生成（异步轮询 15s）
+    U->>UI: 批量生成视频
+    UI->>SDK: createFromImage()
+    SDK->>A: POST /v1/videos
+    A-->>UI: taskId
+    loop 轮询
+        SDK->>A: GET agnesapi?video_id=<id>
+        A-->>SDK: 状态更新
+    end
+```
 
-## Pages
+## 5. 视频生产流程
 
-| Route | Page | Description |
-|-------|------|-------------|
-| / | Dashboard | Project overview |
-| /characters | Character Library | CRUD characters, reference images |
-| /projects | Project Management | Scenes and shots config |
-| /projects/[id] | Project Detail | Shot configurations |
-| /pipeline | Production Pipeline | Core: generate videos |
-| /generate-image | Text-to-Image | Generate from prompts |
-| /image-to-image | Image-to-Image | Upload + prompt |
-| /image-to-video | Image-to-Video | Multi-prompt batch |
-| /text-to-video | Text-to-Video | From text prompt |
-| /assets | Asset Library | Browse and manage assets |
-| /history | Task Center | View history |
-| /settings | API Configuration | API key and models |
+```mermaid
+graph LR
+    A[创建角色] --> B[创建项目]
+    B --> C[添加场景/分镜]
+    C --> D[关联角色到分镜]
+    D --> E[生成角色形象图]
+    E --> F[配置视频参数]
+    F --> G[加载到队列]
+    G --> H[批量生成视频]
+    H --> I[保存到素材库]
+    I --> J[任务中心查看]
+    J --> K[视频编辑器 - Planned]
+```
 
-## Environment Variables
+## 6. 技术栈
+| 分类 | 技术 | 版本 |
+|------|------|------|
+| 框架 | Next.js | 15.2+ |
+| 语言 | TypeScript | 5.7 |
+| UI | React 19 + Tailwind CSS 3.4 | - |
+| 组件 | shadcn/ui (Radix UI) | - |
+| 状态管理 | Zustand 5 | - |
+| HTTP | Axios 1.7 | - |
+| 存储 | IndexedDB + localStorage | - |
+| 拖拽 | @dnd-kit | 6.x |
+| 图标 | Lucide React | 0.460 |
+| 测试 | Vitest + Playwright | - |
+| 构建 | Turbopack | - |
 
-| Variable | Required | Default |
-|----------|----------|--------|
-| NEXT_PUBLIC_AGNES_API_KEY | Yes | - |
-| NEXT_PUBLIC_AGNES_BASE_URL | No | https://apihub.agnes-ai.com/v1 |
-| NEXT_PUBLIC_AGNES_MODEL | No | agnes-image-2.1-flash |
+## 7. 页面介绍
+| 路由 | 页面 | 说明 |
+|------|------|------|
+| / | 仪表盘 | 项目概览 |
+| /characters | 角色库 | 创建和管理 AI 角色 |
+| /projects | 项目管理 | 场景和分镜管理 |
+| /pipeline | 生产流水线 | 核心生产流程 |
+| /generate-image | 文生图 | 文本生成图片 |
+| /image-to-image | 图生图 | 图片参考生成 |
+| /image-to-video | 图生视频 | 多 Prompt 批量 |
+| /assets | 素材资源库 | 统一管理资源 |
+| /history | 任务中心 | 任务历史 |
+| /models | 模型中心 | 模型参数配置 |
+| /prompts | 提示词工作流 | 模板管理 |
+| /recovery | 恢复中心 | 数据恢复 |
+| /editor | 视频编辑器 | [Planned] |
+| /settings | 设置 | API Key |
 
-## Quick Start
+## 8. Agnes API 集成
+
+SDK 位于 `src/services/agnes/`。所有请求通过 Next.js API 代理。
+
+| 路由 | 目标 |
+|------|------|
+| /api/agnes/v1/text-to-image | apihub.agnes-ai.com/v1/text-to-image |
+| /api/agnes/v1/videos | apihub.agnes-ai.com/v1/videos |
+| /api/agnes/agnesapi | apihub.agnes-ai.com/agnesapi |
+| /api/pipeline/download-image | 资源下载代理 |
+
+**SDK 模块**: `index.ts`(入口), `client.ts`(HTTP), `image.ts`(图片), `video.ts`(视频+轮询), `types.ts`(类型)
+
+**限流**: 创建 5s/次, 查询 12s/次, 429 退避 4x, 最大并发 3
+
+## 9. 存储架构
+
+**IndexedDB (AssetsDB)**: images(图片), videos(视频), thumbnails(缩略图), meta(元数据)
+**Zustand Stores**: useProjectStore, useCharacterStore, useTaskStore, useUnifiedAssetStore, useProductionQueueStore
+**CORS 处理**: CDN 不支持跨域，通过 `/api/pipeline/download-image` 代理下载
+
+## 10. 快速开始
 
 ```bash
-# Install
-git clone <repo-url>
 cd agnes-creator
 npm install
-
-# Configure API key
-# Create .env.local with:
-# NEXT_PUBLIC_AGNES_API_KEY=sk-your-key-here
-
-# Run
 npm run dev
+# http://localhost:3000
 ```
+然后访问 /settings 配置 API Key。
 
-## Deployment
+## 11. 部署方式
+- **本地**: `npm run build` + `npm start`
+- **Docker**: [Planned]
+- **Vercel**: 开箱支持
 
-### Production Build
-```bash
-npm run build
-npm start
-```
+## 12. 国际化
 
-### Docker (Planned)
-See [DEPLOYMENT.md](docs/DEPLOYMENT.md)
+| 语言 | 代码 |
+|------|------|
+| 简体中文 | zh-CN |
+| English | en-US |
+文件: `src/i18n/`, hook: `useTranslation()`
 
-## Documentation
+## 13. 开发规范
+1. **角色一致性优先**
+2. **根因优先** — 禁止临时绕过
+3. **流水线稳定性优先** — 角色>流水线>恢复>性能>功能
+4. **国际化** — 所有 UI 中英文
+5. 提交前 `npm run build`
 
-| Document | Description |
-|----------|-------------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Detailed system architecture |
-| [API.md](docs/API.md) | API integration reference |
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment guide |
-| [CONTRIBUTING.md](docs/CONTRIBUTING.md) | Contribution guidelines |
-| [CHANGELOG.md](docs/CHANGELOG.md) | Version history |
-| [ROADMAP.md](docs/ROADMAP.md) | Development roadmap |
+## 14. FAQ
+- **如何配置 API Key?** 在 /settings 页面
+- **角色图片在哪?** 素材库和角色库
+- **视频生成失败?** 检查 API Key/网络/429限流/任务中心
+- **清理缓存?** `Remove-Item -Recurse -Force .next`
 
-## License
+## 15. License
+> [TODO] MIT License
 
-MIT
+<p align="center">
+  <a href="README_EN.md">English</a> ·
+  <a href="docs/ARCHITECTURE.md">架构</a> ·
+  <a href="docs/API.md">API</a> ·
+  <a href="docs/DEPLOYMENT.md">部署</a>
+</p>

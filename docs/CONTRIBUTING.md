@@ -1,66 +1,30 @@
-# Contributing Guide
+# 贡献指南
 
-## Development Workflow
+> [English](CONTRIBUTING_EN.md) · [API](API.md) · [架构](ARCHITECTURE.md)
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run the QA pipeline: `npm run qa:closed-loop`
-5. Commit and push
-6. Open a Pull Request
+## 开发流程
+1. 阅读 README.md / AGENTS.md / docs/
+2. `cd agnes-creator && npm install && npm run dev`
+3. 在 src/app/ 下创建页面
+4. 添加 i18n 支持
+5. 实现 UI 组件 + Zustand Store
+6. 调用 SDK 方法
 
-## Code Style
+## 规范
+- TypeScript 严格模式
+- 所有 UI 中英文双语
+- 硬编码字符串提取到 i18n
+- 提交前 npm run build
 
-- TypeScript strict mode
-- React functional components with hooks
-- Zustand for state management
-- Tailwind CSS for styling
-- Prefer Radix UI primitives over custom components
-
-## File Modification Rules
-
-> ?? **Critical**: Never use PowerShell `Set-Content` or `Out-File` to modify TypeScript/TSX/JS files.
-> These commands can corrupt UTF-8 encoding. Always use Node.js scripts or a proper IDE.
-
-## Build Verification
-
-Before submitting, run:
-
+## 测试
 ```bash
-npm run lint          # ESLint
-npm run typecheck     # tsc --noEmit
-npm run build         # Production build
-npm run test:unit     # Unit tests
-npm run qa:closed-loop  # All checks
+npm run build        # 必须通过
+npm test
+npm run qa:closed-loop
 ```
 
-## Pull Request Guidelines
-
-- Keep PRs focused on a single concern
-- Add/update tests for new functionality
-- Update documentation (AGENTS.md and docs/ files)
-- Ensure character consistency rules are respected
-- No silent fallbacks for video generation
-- Include before/after screenshots for UI changes
-
-## Architecture Decisions
-
-### Character Consistency First
-Character appearance consistency takes priority over generation success rate.
-- NEVER auto-fallback from image-to-video to text-to-video
-- Error states must be explicit: CORS, URL expiry, CDN, network, API issues
-
-### Root Cause Analysis
-Before any fix, identify: Root Cause ? Solution ? Verification
-No temporary workarounds without documented follow-up.
-
-### Pipeline Stability
-Priority order: Character Consistency > Pipeline Stability > Error Recovery > Performance > New Features
-
-## Documentation
-
-When adding new features, update:
-- `AGENTS.md` - Project state snapshot
-- `docs/CHANGELOG.md` - Version history
-- `docs/PROJECT_CONTEXT.md` - Architecture and data flow
-- `docs/ROADMAP.md` - Feature roadmap
+## 核心原则
+1. 角色一致性优先
+2. 根因优先
+3. 流水线稳定性优先
+4. 国际化
