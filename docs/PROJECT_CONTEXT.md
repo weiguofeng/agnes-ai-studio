@@ -1,1 +1,149 @@
-# Agnes AI Studio -- 项目上下文（中文注释版）\n\n<!-- ============================================================ -->\n<!-- 项目简介：Agnes AI Studio 是一个 AI 视频生产平台 -->\n<!-- 核心工作流：角色 -> 项目 -> 流水线 -> 生成角色图 -> 批量生成视频 -> 素材资源库 -> 任务中心 -> 导出 -->\n<!-- 本文件记录当前项目状态、架构设计、关键文件和已知问题 -->\n<!-- 新会话开始前请务必阅读此文件以理解项目上下文 -->\n<!-- ============================================================ -->\n\n## Current Version\n\nV3.2 Hotfix 3\n\n---\n\n<!-- ==================== 项目定位 ==================== -->\n<!-- 说明：业务为角色驱动视频生产，故事从外部 LLM 导入作为分镜 -->\n<!-- ================================================= -->\n## Project Positioning\n\nCharacter -> Project -> Pipeline -> Generate Character Images -> Batch Generate Videos -> Assets Library -> Task Center -> Video Editor -> Export\n\n---\n\n<!-- ==================== 已完成模块 ==================== -->\n<!-- 说明：以下功能经过测试并稳定运行 -->\n<!-- =================================================== -->\n## Completed Modules\n\n- Character Library (CRUD + reference images)\n- Project Management (scenes, shots, storyboard with character association)\n- Assets Library V2 (IndexedDB blobs + Zustand lightweight indexes)\n- Video Editor\n- Production Pipeline V3.2 (two-column, video-only queue, multi-character)\n- Image-to-Video page (multi-prompt, size/duration/negative prompt, asset picker)\n- Image-to-Image page (multi-image upload, size options, save to asset library)\n- Text-to-Image / Text-to-Video pages\n- Task Center (/history) with click-to-play and asset library integration\n- Internationalization (zh-CN / en-US)\n- API Key Management\n- Rate Limiting & CORS Handling (three-layer, server proxy)\n- Model Settings page\n\n---\n\n<!-- ==================== QA 状态 ==================== -->\n<!-- 说明：每次修改后必须运行 npm run build 验证 -->\n<!-- ================================================= -->\n## QA Status\n\n- Build: passed with npm run build\n- All pages compile successfully\n\n---\n\n<!-- ==================== 当前架构说明 ==================== -->\n<!-- 说明：核心生产界面是 /pipeline 流水线页面 -->\n<!-- 关键设计决策记录在此，新会话务必阅读 -->\n<!-- ==================================================== -->\n## Current State (V3.2 Hotfix 3)\n\n### Production Pipeline Architecture\n\nTwo-column layout on /pipeline:\n\n**Left:** StoryboardPreview + CharacterImageSection\n**Right:** StatisticsPanel + CurrentTasksWidget(project-filtered) + ProductionQueuePanel + StorageMonitor\n\n### Key Design Decisions\n\n<!-- 决策1：队列只做视频，不做图片 -->\n1. **Video-only queue** -- Image generation removed from queue. Only video generation\n\n<!-- 决策2：视频生成依赖角色图 -->\n2. **Character images drive video** -- Each shot associates characters. Video uses character image URL(s)\n\n<!-- 决策3：单角色和多角色使用不同 payload 结构 -->\n3. **Single vs Multi character** -- Single: payload.image = url. Multi: payload.extra_body.image = [url1, url2]\n\n<!-- 决策4：流水线使用独立轮询，不与 taskStore PollScheduler 冲突 -->\n4. **No polling overlap** -- Pipeline uses own agnes.video.poll(). TaskStore PollScheduler NOT used for pipeline tasks\n\n<!-- 决策5：任务创建前清理旧任务 -->\n5. **Task cleanup**: handleGenerateVideo clears old tasks for same shot. handleBatchGenerateVideos aborts in-flight polls + clears processing state\n\n<!-- 决策6：CurrentTasksWidget 按 projectId 隔离 -->\n6. **CurrentTasksWidget**: Takes projectId prop. Filters tasks by current project. Completed tasks removed immediately. Failed tasks auto-cleaned after 60s\n\n### Video Duration\n\n| Duration | num_frames | frame_rate |\n|----------|-----------|------------|\n| ~3s | 81 | 24 |\n| ~5s | 121 | 24 |\n| ~8s | 193 | 24 |\n| ~10s | 241 | 24 |\n| ~18s | 441 | 24 |\n\nConstraint: num_frames >= 49 and num_frames % 8 == 1\n\n<!-- ============ 限流策略 ============ -->\n<!-- 说明：Agnes API 三层保护机制 -->\n<!-- =================================== -->\n### Rate Limiting (three-layer)\n\n1. Mutex queue -- Promise-chain serializes concurrent acquire()\n2. Interval limiting -- Query: 12000ms. Create: 5000ms\n3. Sliding window -- Max 3 queries per 20s\n\nPoll defaults: interval=15000ms, maxInterval=60000ms, 429 backoff=4x, error backoff=2x\n\n<!-- ============ 素材库架构 ============ -->\n<!-- 说明：IndexedDB 存二进制，Zustand 存轻量索引 -->\n<!-- IntersectionObserver 延迟加载，自动回收 -->\n<!-- ==================================== -->\n### Asset Library\n\n- **Binary**: IndexedDB via AssetsDB (images, videos, thumbnails)\n- **Index**: Zustand useUnifiedAssetStore (AssetIndex metadata, no blobs)\n- **Lazy loading**: IntersectionObserver loads blobs only for visible cards\n- **Memory safety**: Blob URLs revoked on unmount. Only ~30 visible cards hold blob URLs\n- **Auto-save**: Pipeline videos auto-saved. Character images manually saved (user clicks Save)\n- **Sync**: Always syncs from IndexedDB on /assets mount\n\n<!-- ============ 角色图片区域 ============ -->\n<!-- 说明：手动保存、全屏预览、尺寸 9:16 HD -->\n<!-- ======================================= -->\n### Character Image Section\n\n- Default size: 9:16 HD (1024x1792)\n- Reference images deduplicated via new Set()\n- Generated image: click for full-size preview modal (close button + backdrop dismiss)\n- Save button: saves to IndexedDB asset library only (not addReferenceImage)\n- No auto-save on generation -- user must click Save\n\n<!-- ============ 图生视频页 ============ -->\n<!-- 说明：支持多提示词、尺寸选择、时长选择、负面提示词、资源库选图 -->\n<!-- ====================================== -->\n### Image-to-Video Page (/image-to-video)\n\n- Single Image + Multi-Prompt: generate multiple videos from one image with different prompts\n- AssetPickerDialog: browse and select images from asset library\n- Size options: 1920x1080, 1280x720, 1080x1920, 720x1280, 1024x1024, 768x768\n- Duration options: ~3s(81f), ~5s(121f), ~10s(241f), ~18s(441f)\n- Negative prompt input\n- 5s request delay between each generation to avoid 429 rate limiting\n- Results shown as thumbnails, click for full-size preview\n- Save to asset library via StorageService.saveAssetFromUrl\n\n<!-- ============ 图生图页 ============ -->\n<!-- 说明：支持多图上传、尺寸选择、保存到资源库 -->\n<!-- ==================================== -->\n### Image-to-Image Page (/image-to-image)\n\n- Multi-image upload: select multiple images, apply same prompt\n- Size options: same as text-to-image\n- 5s request delay between each generation\n- Results as thumbnails, click for full-size preview\n- Save to asset library on demand (not auto-save)\n\n<!-- ============ 任务中心 ============ -->\n<!-- 说明：视频点击播放，保存到素材库 -->\n<!-- ================================= -->\n### Task Center (/history)\n\n- Videos: click to play (no autoPlay), play button overlay\n- Save to asset library: button on completed tasks, auto-detects if already saved\n- Type filter tabs, search by prompt, batch delete\n\n<!-- ============ CORS 处理 ============ -->\n<!-- 说明：Agnes CDN 无 CORS 头，全部走代理 -->\n<!-- =================================== -->\n### CORS Handling\n\n- Agnes CDN (platform-outputs.agnes-ai.space) lacks CORS headers\n- All downloads use server proxy: /api/pipeline/download-image (no direct fetch)\n- StorageService always uses proxy for all URL downloads (removed direct fetch fallback)\n\n---\n\n<!-- ==================== 关键文件 ==================== -->\n<!-- 说明：修改前务必理解其职责 -->\n<!-- =================================================== -->\n## Key Files\n\n| File | Purpose |\n|------|---------|\n| src/app/pipeline/page.tsx | Pipeline main page |\n| src/app/image-to-video/page.tsx | Image-to-video generation |\n| src/app/image-to-image/page.tsx | Image-to-image generation |\n| src/app/history/page.tsx | Task center |\n| src/app/assets/page.tsx | Asset library |\n| src/services/agnes/video.ts | Video API + rate limiter |\n| src/services/StorageService.ts | IndexedDB asset storage |\n| src/services/AssetsDB.ts | IndexedDB DB layer |\n| src/components/pipeline/CharacterImageSection.tsx | Character image generation |\n| src/components/pipeline/CurrentTasksWidget.tsx | Real-time tasks (project-filtered) |\n| src/components/pipeline/QueueCardView.tsx | Queue cards |\n| src/components/shared/TaskList.tsx | Task list (video play + save to asset) |\n| src/stores/taskStore.ts | Unified task store (PollScheduler) |\n| src/stores/unifiedAssetStore.ts | Asset index store |\n| src/stores/productionQueueStore.ts | Queue state |\n| src/hooks/useAssetBlob.ts | Lazy-load IndexedDB blob hook |\n\n---\n\n<!-- ==================== 已知问题 ==================== -->\n<!-- 说明：未解决问题列表，遇到先检查 -->\n<!-- =================================================== -->\n## Known Issues\n\n1. **CDN images lack CORS headers** -- All downloads use server proxy\n2. **CDN videos also lack CORS** -- StorageService always uses proxy\n3. **Blob URLs expire on page refresh** -- StorageService.refreshAssetUrl() recreates\n4. **429 rate limiting** -- Conservative intervals may need adjustment\n5. **Some legacy pages remain** -- storyboard/, prompts/, recovery/ still exist but not in sidebar\n6. **Build warns about unused imports** -- Minor, no functional impact\n\n<!-- ==================== 最近变更 ==================== -->\n<!-- 说明：最近的 Hotfix 和功能添加 -->\n<!-- =================================================== -->\n## Recent Changes (V3.2 Hotfix 3)\n\n1. **Image-to-Video page rewrite**: multi-prompt, size/duration/negative prompt, asset picker dialog\n2. **Image-to-Image page**: multi-image upload, size options, save to asset library\n3. **Pipeline**: CurrentTasksWidget projectId filtering, old task cleanup on batch\n4. **StorageService**: Always use server proxy (removed direct fetch)\n5. **Sidebar**: Removed recoveryCenter and promptWorkflow menu items\n6. **Menu titles**: History menu - 历史记录, Models menu - 模型中心\n\n
+# Project Context
+
+<!--
+  ??????? ? ??????????????????????
+  ?????500???????????
+-->
+
+## ??????
+
+- **????**?Agnes AI Studio
+- **??**??? AI ??????????????????????????
+- **????**??? ? ??(??+??) ? ???(?????) ? ?????? ? ?????(IndexedDB) ? ????
+
+## ?????
+
+- **??**?Next.js 15.5.19 (App Router)
+- **??**?TypeScript
+- **????**?Zustand (persist middleware)
+- **UI**?Tailwind CSS + shadcn/ui ??
+- **HTTP**?Axios (???/?????)
+- **??**?IndexedDB (?? AssetsDB ??)
+- **???**???? i18n ??
+- **??**?next build
+
+## ??????
+
+| ?? | ?? | ?? |
+|------|------|------|
+| / | ??/??? | ???? |
+| /characters | ????? | CRUD ?????????? |
+| /projects | ???? | ???????????? |
+| /pipeline | ????? | ???????? ? ???? |
+| /generate-image | ??? | ??????? |
+| /image-to-image | ??? | ????+??????? |
+| /image-to-video | ???? | ??+?Prompt?????? |
+| /assets | ????? | ????????????? |
+| /history | ???? | ????????????? |
+| /settings | API ?? | ?? API Key?BaseURL ? |
+
+## ??????
+
+### 4.1 ???
+
+```
+??(Character) ? ??(Project + Scenes + Shots)
+  ? ?????(Pipeline)
+    ? CharacterImageSection: ???????(???)
+    ? ProductionQueue: ??????(????)
+  ? ?????: IndexedDB ??
+  ? ????: ???????
+```
+
+### 4.2 API ???
+
+??? ? Next.js API ??(/api/agnes/[...path]) ? Agnes API(apihub.agnes-ai.com)
+
+- **????**?`src/app/api/agnes/[...path]/route.ts`
+  - ?????? /`v1` ? /`agnesapi` ??
+  - ???? API Key (?????? localStorage)
+  - ???? 120s
+  - ??? `apihub.agnes-ai.com` ??
+- **Axios ???**?`src/services/agnes/client.ts`
+  - ???????? Authorization ????? headers
+  - ??????????????? AgnesApiError
+
+### 4.3 SDK ??
+
+```src/services/agnes/
+??? index.ts      # ???? agnes ??
+??? client.ts     # Axios HTTP ???(????)
+??? types.ts      # ????
+??? image.ts      # ??? + ?????
+??? video.ts      # ???? + ??????(???)
+```
+
+### 4.4 ????
+
+- **IndexedDB**?AssetsDB ????????????????
+  - `images` ??????
+  - `videos` ??????
+  - `thumbnails` ?????
+  - `meta` ???????
+- **Zustand Store**?useUnifiedAssetStore ??????
+  - `syncFromStorage()`?? IndexedDB ????
+  - `addIndex()`???????
+
+### 4.5 ???????
+
+- **POST /v1/videos**???????
+- **GET /agnesapi?video_id=<ID>**???????
+- **????**(`src/services/agnes/video.ts`):
+  - ???? 15s?????(2x)??? 60s
+  - 429 ???? 4x
+  - ?????? 20 ?
+  - ??? 10 ??
+- **????**?PollRateLimiter
+  - ???? 12s????? 5s
+  - ?????20s ??? 3 ???
+
+## ????????
+
+### 5.1 ????? (`src/app/pipeline/page.tsx`)
+
+- `handleGenerateVideo(shotId)`????????
+  - ?????????? ? createFromImage ? poll ? ??????
+- `handleBatchGenerateVideos()`?????
+  - ????? ? ????(6s ??) ? ?? videoAbortControllers ??
+
+### 5.2 ???? (`src/app/image-to-video/page.tsx`)
+
+- ?? + ? Prompt ? ??????
+- `runLimitedConcurrency(tasks, 2)`???????? 2 ?????
+- ?????????? (AssetPickerDialog)
+- ????? StorageService.proxyUrlToBlob ?? CORS
+
+### 5.3 ??? (`src/app/image-to-image/page.tsx`)
+
+- ??????????????
+- ????? 5s ?? 429 ??
+- ??????
+
+### 5.4 ??? (`src/app/generate-image/page.tsx`)
+
+- useGenerateImage hook ??????
+- ?? seed/steps/guidance_scale/negative_prompt ??
+- ?? PromptAdvancedPanel ??????
+
+## ??????
+
+### 6.1 CORS ??
+
+??? CDN ??(? platform-outputs.agnes-ai.space)??????
+- ?? `/api/pipeline/download-image` ????
+- StorageService.saveAssetFromUrl ??????
+
+### 6.2 429 ??
+
+??????????????
+- PollRateLimiter ??????
+- 429 ??? 4x ??
+
+### 6.3 ?????
+
+Next.js ??????????? 20-30 ??????? 200ms
+
+## ??????????
+
+- PowerShell ??????? UTF-8 ??????? Node.js ????
+- ??? `\r\n` ???????????

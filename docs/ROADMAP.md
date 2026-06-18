@@ -1,1 +1,64 @@
-# Agnes AI Studio Roadmap（中文注释版）\n\n<!-- ============================================================ -->\n<!-- 路线图说明：记录项目已完成和计划中的版本 -->\n<!-- 已完成版本有详细的功能列表，未来版本标记为计划 -->\n<!-- 每次完成新功能后更新此文件 -->\n<!-- ============================================================ -->\n\n<!-- ============================================================ -->\n<!-- V3.2 Hotfix 3 -- 图生视频/图生图增强、清理冗余 -->\n<!-- 功能：多提示词视频、多图上传、资源库选择器、侧边栏清理 -->\n<!-- ============================================================ -->\n## V3.2 Hotfix 3 (Completed)\n\n### Image-to-Video Enhancement\n- Multi-prompt support: one image generates multiple videos with different prompts\n- Size options (1920x1080, 1280x720, 1080x1920, 720x1280, 1024x1024, 768x768)\n- Duration options (~3s/5s/10s/18s) with correct num_frames\n- Negative prompt input\n- AssetPickerDialog: browse and select images from asset library\n- 5s request delay between generations to prevent 429\n- Save results to asset library\n\n### Image-to-Image Enhancement\n- Multi-image upload: select multiple images, same prompt\n- Size options\n- Save to asset library\n\n### Pipeline & UI Cleanup\n- CurrentTasksWidget projectId filtering\n- StorageService: always use server proxy (removed direct fetch)\n- Removed recoveryCenter and promptWorkflow from sidebar\n- Updated menu titles to Chinese\n\n<!-- ============================================================ -->\n<!-- V3.2 Hotfix 2 -- 任务中心增强、实时任务修复、角色图优化 -->\n<!-- 功能：projectId隔离、角色去重、手动保存、全屏预览 -->\n<!-- ============================================================ -->\n## V3.2 Hotfix 2 (Completed)\n\n### Task Center\n- Click-to-play video (no autoPlay)\n- Save-to-library button with duplicate detection\n- Type filter tabs, search, batch delete\n\n### Pipeline Fixes\n- CurrentTasksWidget: project-filtered, completed tasks cleaned immediately, failed after 60s\n- CharacterImageSection: deduplicated reference images, manual save only, preview modal\n- Size dropdown: bg-background/80 for visibility\n- Old task cleanup per shot before new creation\n\n<!-- ============================================================ -->\n<!-- V3.2 -- 统一资源系统 -->\n<!-- 功能：IndexedDB/Zustand 双层存储、内存安全、延迟加载 -->\n<!-- ============================================================ -->\n## V3.2 (Completed)\n\n### Unified Asset System\n- Index/blob separation: IndexedDB stores blobs, Zustand stores AssetIndex (memory-safe)\n- Lazy loading via IntersectionObserver, auto-revoke on unmount\n- Multi-dimension filtering (type, project, character, tags, search, sort)\n- Preview dialog with metadata + download\n\n<!-- ============================================================ -->\n<!-- V3.1 -- 统计和 UI 优化 -->\n<!-- 功能：实时任务组件、统计数据修复、429限流 -->\n<!-- ============================================================ -->\n## V3.1 (Completed)\n\n### Pipeline Statistics & UI\n- StatisticsPanel: removed imagesCompleted, fixed avgDuration/estimatedRemaining\n- CurrentTasksWidget: pipeline-only tasks, animated progress bars, auto-hide\n- TimelineImport and ProductionModeToggle deleted\n- Rate limiting: Mutex + sliding window + increased intervals\n- Asset library sync: auto-save character images + videos\n\n<!-- ============================================================ -->\n<!-- V3.0 -- 队列重构 -->\n<!-- 功能：移除图片生成、多角色视频、API修复 -->\n<!-- ============================================================ -->\n## V3.0 (Completed)\n\n### Pipeline Queue Refactoring\n- Removed image generation from production queue\n- Multi-character compositing for video generation\n- Video duration control (3s/5s/8s/10s/18s/custom)\n- Fixed CORS: server proxy for image/video download\n- Fixed API: JSON POST with image URLs (not FormData)\n- Fixed rate limits: PollRateLimiter + jitter + stagger\n- Fixed useCallback stale closure\n- Removed old AI Story Studio and Storyboard Design menus\n- Fixed video duration presets (valid num_frames %8==1)\n\n<!-- ============================================================ -->\n<!-- V2.4-V2.9 -- 历史版本（已完成） -->\n<!-- 功能：角色一致性管线、自动化、AI制作工作室、生产仪表盘、容错 -->\n<!-- ============================================================ -->\n## V2.4 - V2.9 (Completed)\n\n### V2.4: Character Consistency Pipeline\n- Character DNA, reference, and lock support\n- Batch video generation and production queue\n- URL diagnostics, server proxy, and retry strategy\n\n### V2.5: Automation\n- Automatic image/video/subtitle/cover generation\n\n### V2.6: AI Production Studio\n- One-click full project generation, batch project production\n- Multi-project queue, cloud task scheduling\n\n### V2.7: Production Dashboard Upgrade\n- Dual-column layout, statistics panel, shot cards, prompt editor\n- Asset preview, batch actions, production mode, live tasks\n\n### V2.8: Production Hardening\n- Auto-save system, prompt history persistence\n- Permanent asset Blob storage, asset integrity checks\n- Project backup/restore, recovery center, IndexedDB optimization\n\n### V2.9: Pipeline UX & Recovery Hardening\n- Full zh-CN / en-US copy coverage\n- StorageMonitor safe cleanup UI\n- QueueCardView lock/unlock/delete actions\n- Agnes polling 429/rate-limit backoff\n\n<!-- ============================================================ -->\n<!-- 未来计划 -->\n<!-- V3.3: 多模型支持、队列排序、角色图库 -->\n<!-- V3.4: 云端调度、多项目队列、一键生成 -->\n<!-- V3.5: 自动字幕、自动封面 -->\n<!-- ============================================================ -->\n## Future Plans\n\n### V3.3\n- Multi-model support for video generation\n- Queue reorder and drag-and-drop\n- Character image gallery in pipeline\n- Remove legacy pages (storyboard, prompts, recovery)\n\n### V3.4\n- Cloud task scheduling\n- Multi-project queue\n- One-click full project generation\n- Export queue as timeline presets\n\n### V3.5\n- Subtitle auto-generation\n- Cover auto-generation\n- Batch project production across multiple projects\n\n
+# ?????
+
+<!--
+  ???? ? ????????????????
+  ?????500???????????
+-->
+
+## ???? V3.2 Hotfix 3
+
+?????????
+
+### ??
+- [x] ????? (CRUD + ?????)
+- [x] ???? (?? + ????)
+- [x] ????? (????? + ??????)
+- [x] ??? (?????)
+- [x] ??? (????)
+- [x] ???? (? Prompt ??)
+- [x] ????? (IndexedDB ??)
+- [x] ???? (???? + ??????)
+- [x] API ????
+
+### SDK
+- [x] Agnes API ?? (?????????????????)
+- [x] ?????????
+- [x] 429 ????
+- [x] CORS ????
+- [x] Next.js API ???
+
+### ??
+- [x] IndexedDB ????
+- [x] Zustand ??????
+- [x] ????? (localStorage)
+
+## ????
+
+### ????
+- [ ] ????????
+- [ ] ?????? IndexedDB ??
+- [ ] ?????????
+
+### ????
+- [ ] ???????
+- [ ] ?????????
+- [ ] ????????
+
+### ???
+- [ ] ??????
+- [ ] ??????????
+- [ ] ??????????
+
+## ????
+
+- [ ] ????? (?????)
+- [ ] ????/??
+- [ ] ???????
+- [ ] ???????
+
+## ????
+
+- [ ] ?????
+- [ ] ??????
+- [ ] API ????
+- [ ] ????

@@ -1,1 +1,58 @@
-# Changelog （中文注释版）\n\n<!-- ============================================================ -->\n<!-- 版本说明：每次重要的功能变更、Bug修复、架构调整都记录在此文件 -->\n<!-- 格式：日期 (版本号) -> 变更类型 (Fixed/Changed/Added/Removed) -->\n<!-- ============================================================ -->\n\n<!-- ============================================================ -->\n<!-- V3.2 Hotfix 3  --  图生视频/图生图增强、侧边栏清理、CORS 统一 -->\n<!-- 2026-06-17      --  多提示词视频、多图上传、资源库选择器 -->\n<!-- ============================================================ -->\n## 2026-06-17 (V3.2 Hotfix 3)\n\n### Added\n\n- **Image-to-Video page rewrite** (/image-to-video):\n  - Multi-prompt support: one image + multiple prompts generates multiple videos\n  - Size options: 1920x1080, 1280x720, 1080x1920, 720x1280, 1024x1024, 768x768\n  - Duration options: ~3s/5s/10s/18s with correct num_frames %8==1\n  - Negative prompt input\n  - AssetPickerDialog: browse and select images from asset library as input\n  - 5s request delay between generations\n  - Results: thumbnails, click for full-size preview, save to asset library\n\n- **Image-to-Image page enhancement** (/image-to-image):\n  - Multi-image upload: select multiple images, apply same prompt\n  - Size options added\n  - 5s request delay between generations\n  - Save to asset library on demand\n\n### Changed\n\n- **Pipeline**: CurrentTasksWidget now accepts projectId prop, filters by project\n- **Pipeline**: handleGenerateVideo clears old tasks for same shot before creating new ones\n- **Pipeline**: handleBatchGenerateVideos aborts in-flight polls and clears processingVideos\n- **StorageService**: Always uses server proxy for URL downloads (removed direct fetch)\n- **Sidebar**: Removed recoveryCenter and promptWorkflow menu items\n- **Menu titles**: History -> 历史记录, Models -> 模型中心\n\n<!-- ============================================================ -->\n<!-- V3.2 Hotfix 2  --  任务中心增强、实时任务修复、角色图优化 -->\n<!-- 2026-06-17      --  CurrentTasksWidget projectId, 角色图去重/手动保存 -->\n<!-- ============================================================ -->\n## 2026-06-17 (V3.2 Hotfix 2)\n\n### Fixed\n\n- **CurrentTasksWidget showing other project tasks** -- Three fixes applied\n- **Completed video progress still showing 0%** -- completed status always shows 100%\n- **Duplicate reference images** -- allRefUrls uses new Set() for dedup\n- **Auto-save without user confirmation** -- removed auto-save from generateImage()\n- **Save button causing double images** -- handleSaveToLibrary does not call addReferenceImage()\n- **Generate button stuck spinning** -- removed blocking try-catch\n- **Missing full-screen preview** -- added click preview modal with close button\n- **Size dropdown transparent** -- SelectTrigger gets bg-background/80\n- **Task center video autoPlay** -- removed autoPlay, click to play\n- **Task center missing save-to-library button** -- added button with duplicate detection\n\n### Changed\n\n- handleGenerateVideo clears old tasks per shot before creating new ones\n- handleBatchGenerateVideos aborts in-flight polls + clears processingVideos\n- CurrentTasksWidget takes projectId prop, filters by current project\n- CharacterImageSection: default size 9:16 HD (1024x1792), reference image dedup\n- TaskListItem: click to play video, save-to-library button\n\n<!-- ============================================================ -->\n<!-- V3.2     --  统一资源管理系统（内存安全） -->\n<!-- 2026-06-17 --  IndexedDB + Zustand 双层存储架构 -->\n<!-- ============================================================ -->\n## 2026-06-17 (V3.2)\n\n### Added\n\n- **Unified Asset System (V3.2)**: Memory-safe index/blob separation:\n  - New type: src/types/asset.ts -- AssetIndex + AssetFilter\n  - New store: src/stores/unifiedAssetStore.ts -- Zustand + persist, indexes only\n  - New Hook: src/hooks/useAssetBlob.ts -- on-demand IndexedDB blob loading, auto-revoke on unmount\n  - Auto-sync: pipeline-generated assets auto-saved to IndexedDB and synced to unifiedAssetStore\n\n- **Asset Library page refactor** (/assets):\n  - IntersectionObserver lazy loading\n  - Filter by type/project/character/tags\n  - Preview dialog (image/video + metadata + download)\n\n### Changed\n\n- Pipeline page: old useAssetStore replaced by useUnifiedAssetStore\n- CharacterImageSection: generated images auto-saved to IndexedDB\n\n<!-- ============================================================ -->\n<!-- V3.1     --  流水线统计和 UI 优化 -->\n<!-- 2026-06-16 --  429限流修复、实时任务组件 -->\n<!-- ============================================================ -->\n## 2026-06-16 (V3.1)\n\n### Fixed\n\n- **Batch video 429 rate limiting**: PollRateLimiter mutex, sliding window (3/20s), intervals increased\n- **10s video 400 error**: fixed num_frames to satisfy %8==1 constraint\n- **Video download CORS**: StorageService uses server proxy\n\n### Changed\n\n- StatisticsPanel: removed imagesCompleted, avgDuration in minutes\n- CurrentTasksWidget: pipeline-only tasks, animated progress bars, auto-hide\n- Removed ProductionModeToggle and TimelineImport\n\n<!-- ============================================================ -->\n<!-- V3.0     --  流水线队列重构 -->\n<!-- 2026-06-16 --  移除图片生成、多角色视频、API调用修复 -->\n<!-- ============================================================ -->\n## 2026-06-16 (V3.0)\n\n### Fixed\n\n- **Batch video generation three root causes**: useCallback stale closure, CORS in imageCompositor, FormData boundary\n- **Poll rate limiting**: PollRateLimiter (max 2 concurrent), initial delay 0-2000ms, +/-30% jitter\n\n### Changed\n\n- QueueCardView: removed image generation UI, added character thumbnails\n- handleGenerateVideo: no longer downloads/composits image blobs, passes URLs directly\n- createFromImage: changed to JSON POST + image URL(s)\n\n### Removed\n\n- Image generation from production queue\n- AI Story Studio and Storyboard Design menus\n\n
+# ????
+
+<!--
+  ???? ? ???????????
+  ?????500???????????
+-->
+
+## [V3.2 Hotfix 3] - 2026-06-17
+
+### ??
+- ???????Axios ????????????????(URL???????)
+- image.ts ?????generate ??????? payload ???
+- useGenerateImage ??????????? API ?????????
+
+### ??
+- image.ts generate ???????? seed/steps/guidance_scale/negative_prompt ??? API
+- ???????params as unknown as Record<string, unknown>
+- ?? poll ??????? API errorMessage ???
+- extractVideoTaskIds ???? task ID ????? video ID ???
+- PowerShell ???????????????? Node.js ?????
+
+## [V3.2 Hotfix 2] - 2026-06-17
+
+### ??
+- ?????? catch ??? console.error ??
+- TaskProgress ???? errorMessage ??
+
+## [V3.2 Hotfix 1] - 2026-06-16
+
+### ??
+- ?????? 429 ????
+- CORS ????????
+- ??????????????
+
+## [V3.2] - 2026-06-16
+
+### ??
+- ?????????
+- ????????????
+- ?????????
+- ????? Prompt ????
+
+### ??
+- ?????????????
+- ???????????2???
+- ?????????
+
+## [V3.1] - 2026-06-13
+
+### ??
+- ?????????
+- ??????
+- ??????
+- ??????
+
+### ??
+- ??????????????
+- ???????

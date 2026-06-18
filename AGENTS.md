@@ -71,7 +71,7 @@
 
 ---
 
-# Project State Snapshot (2026-06-17 V3.2 Hotfix 3)
+# Project State Snapshot (2026-06-17 V3.2 Hotfix 3 (2026-06-18))
 
 ## Current Version: V3.2 Hotfix 3
 
@@ -148,6 +148,37 @@ Character -> Project (scenes + shots) -> Pipeline -> CharacterImageSection gener
 10. StorageService always uses proxy for CDN URLs
 11. Image-to-Video: 5s delay between requests
 
+### image.ts generate() ????
+- generate ?????? params as unknown as Record ??????
+- ?????seed(>=0?), steps, guidance_scale, negative_prompt
+- ?????console.debug("[ImageService] Generating image, payload:", ...)
+
+### Axios ?????
+- ?????console.debug("[AgnesClient] Response OK:", status, url)
+- ?????console.error ?? url/method/status/data/headers ????
+- ???????? AgnesApiError
+
+### useGenerateImage ????
+- catch ????? err.message (API ??????)
+- ?? console.error("[useGenerateImage] Error:", err) ??????
+
+### ???? poll ????
+- ????? progress.errorMessage ??????
+- console.error("[Agnes SDK] Video generation failed", { taskId, errorMessage })
+
+### extractVideoTaskIds video ID ??
+- ? API ??? video_id ??????? task ID (video_ + base64) ???
+- ?? base64 ??? video_id:video_xxx ??
+
+### ??????
+- ???? PowerShell Set-Content ????(??? UTF-8 ??)
+- ???? Node.js (--input-type=module) ? git checkout ??
+- ??? \r\n ??
+
+## Build Verification
+- npm run build passes
+- First dev load ~20-30s cold start, subsequent ~200ms
+- Port 3000 always used; kill other processes if needed
 ## Build Verification
 - npm run build passes
 - First dev load ~20-30s cold start, subsequent ~200ms
